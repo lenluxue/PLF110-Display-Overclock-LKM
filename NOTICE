@@ -1,0 +1,27 @@
+PLF110 Display Overclock LKM
+Copyright (C) 2026 酷安丛雨颜烬 and OpenAI Codex
+
+This repository is licensed under GPL-2.0-only.
+
+Acknowledgements and provenance
+--------------------------------
+
+This PLF110 implementation was organized with reference to:
+
+  MTK-Display-Overclock-LKM
+  https://github.com/Yunnijian/MTK-Display-Overclock-LKM
+  Reference revision: 428bc3494cfdf8e4cc5f38a848a3bb102774aece
+  Repository owner/maintainer: Yunnijian
+  Author named by the PMB110 reference source: Smartisan_Apple_Kt
+
+We sincerely thank the upstream authors for publishing their MTK display LKM
+reference, its defensive ABI/KCFI checks, documentation, and build layout under
+the GPL.  This repository is a device-specific derivative and preserves that
+credit; it is not presented as an independently invented replacement.
+
+The PLF110 adaptation also depends on GPL sources published by OnePlusOSS and
+MediaTek for the MT6989 kernel, vendor modules, and AA600 display driver.
+
+PLF110 device adaptation and testing: 酷安丛雨颜烬 × OpenAI Codex.
+
+No endorsement by the acknowledged projects or vendors is implied.
