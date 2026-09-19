@@ -26,7 +26,6 @@ Sincere thanks to:
 - [OnePlusOSS](https://github.com/OnePlusOSS) and MediaTek for publishing the
   GPL kernel, vendor-module, and display-driver sources used to establish the
   PLF110 ABI.
-- PLF110 adaptation and testing: 酷安丛雨颜烬 × OpenAI Codex.
 
 This is a GPL-2.0-only derivative implementation. Upstream provenance is also
 recorded in [NOTICE](NOTICE).

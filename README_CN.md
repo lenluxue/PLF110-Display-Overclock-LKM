@@ -25,7 +25,6 @@ English: [README.md](README.md)
 - `Smartisan_Apple_Kt`：上述 PMB110 参考源码中标注的原作者。
 - [OnePlusOSS](https://github.com/OnePlusOSS) 与 MediaTek：提供 PLF110 对应的
   GPL 内核、设备模块和显示驱动源码基础。
-- PLF110 适配与测试：酷安丛雨颜烬 × OpenAI Codex。
 
 本仓库是 GPL-2.0-only 衍生实现，保留上游许可证与来源说明。感谢原项目作者
 愿意公开成果，让后续设备适配可以建立在可复核代码上，而不是只留下二进制。
