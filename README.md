@@ -152,7 +152,15 @@ on its refresh-rate XML and Android rendering caps. A companion root module
 should copy the current device's `/my_product/etc/refresh_rate_config.xml` on
 every boot and modify only the maximum/default fields after validation. It
 must preserve OEM app, scene, VRR, and ADFR rules and restore the previous
-runtime file on uninstall. Do not ship a hand-written replacement XML.
+runtime file on uninstall. Its `system.prop` should also set
+`ro.oplus.refreshrate.maxsettings=4`, which keeps the native 144 Hz / ID 4
+entry in ColorOS's per-app refresh-rate menu. Do not ship a hand-written
+replacement XML.
+
+That property does not invent a display mode. It is valid only after DRM,
+Android's display cache, and the ColorOS configuration all expose the real
+ID 4 mode. See [companion/README.md](companion/README.md) for the framework
+decision path and verification notes.
 
 ## ABI notes
 

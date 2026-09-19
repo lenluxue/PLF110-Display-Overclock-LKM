@@ -191,10 +191,17 @@ LKM 只负责让内核 DRM/MTK 显示栈真实拥有 144Hz。ColorOS 是否把�
 1. 从设备当前 `/my_product/etc/refresh_rate_config.xml` 复制原厂文件；
 2. 只微调 `maxrefreshsettings` 与 `defaultMaxRate`；
 3. 保留所有 OEM 应用、场景、VRR 与 ADFR 策略；
-4. 写入前验证，卸载时恢复备份。
+4. 在模块 `system.prop` 中声明 `ro.oplus.refreshrate.maxsettings=4`，让
+   ColorOS 设置的“自定义应用刷新率”保留原生 144Hz / ID 4 选项；
+5. 写入前验证，卸载时恢复备份。
 
 不要在仓库里放一份手写的完整 XML 覆盖所有系统规则。ROM 更新后，原厂 XML
 可能变化，始终应以设备当前文件为基线。
+
+这里的属性不会凭空制造 144Hz。设置程序会先从 DisplayManager 读取真实模式，
+再用该属性决定应用刷新率菜单的最高原生 ID；只有 DRM、Android 显示缓存和
+ColorOS 配置均已识别 ID 4 时，它才应设为 `4`。详细分析见
+[companion/README_CN.md](companion/README_CN.md)。
 
 ## ABI、KCFI 与 CRC
 
