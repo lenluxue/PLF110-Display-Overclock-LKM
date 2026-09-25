@@ -36,6 +36,7 @@
 #include <linux/mutex.h>
 #include <linux/platform_device.h>
 #include <linux/ptrace.h>
+#include <linux/sched.h>
 #include <linux/string.h>
 #include <linux/uaccess.h>
 
@@ -64,6 +65,15 @@ struct mtk_drm_crtc;
 #define PLF110_BASE_PLL_CLK 581
 #define PLF110_BASE_DATA_RATE 1162
 #define PLF110_144_DATA_RATE 1395
+
+/* The panel vendor module keeps get_mode_enum and ext_param_set in the same
+ * text section.  Cross-checking the latter lets us derive the former without
+ * hard-coding a relocated kernel address. */
+#define PLF110_P3_DELTA_GET_MODE_ENUM 0x1d14
+#define PLF110_P3_DELTA_EXT_PARAM_SET 0x758
+#define PLF110_P7_DELTA_GET_MODE_ENUM 0x2040
+#define PLF110_P7_DELTA_EXT_PARAM_SET 0x754
+#define PLF110_FHD_SDC120 2
 
 typedef int (*plf110_panel_get_modes_t)(struct drm_panel *panel,
 	struct drm_connector *connector);
@@ -105,6 +115,19 @@ struct plf110_state {
 
 	struct kprobe panel_probe;
 	struct kprobe porch_probe;
+	struct kretprobe enum_probe;
+	bool enum_hook_registered;
+	unsigned long panel_anchor;
+	unsigned long addr_get_mode_enum;
+	unsigned long enum_fixes;
+	/* Optical fingerprint illumination compatibility for the 144 Hz mode. */
+	struct kretprobe ofp_probe;
+	struct kretprobe vref_probe;
+	bool ofp_hooks_registered;
+	int ofp_depth;
+	struct task_struct *ofp_task;
+	unsigned long ofp_calls;
+	unsigned long ofp_fixes;
 	bool panel_probe_registered;
 	bool porch_probe_registered;
 	bool installed;
@@ -133,6 +156,10 @@ struct plf110_state {
 
 static struct plf110_state state;
 static DEFINE_MUTEX(control_lock);
+/* The vendor HBM gate only accepts 120 Hz when its 30 Hz-AOD FOD path is set.
+ * This changes the value seen by that gate only; the real display mode stays
+ * at 144 Hz and userspace never sees the compatibility value. */
+static bool ofp_fix = true;
 
 static noinline __used int plf110_panel_get_modes(
 	struct drm_panel *panel, struct drm_connector *connector);
@@ -147,6 +174,9 @@ static noinline __used int plf110_ext_param_get(
 static noinline __used int plf110_mode_switch_update_for_vdo(
 	struct drm_connector *connector, unsigned int cur_mode,
 	unsigned int dst_mode);
+
+static int register_panel_enum_hook(void);
+static void unregister_panel_enum_hook(void);
 
 static unsigned int mode_refresh(const struct drm_display_mode *mode)
 {
@@ -361,13 +391,6 @@ static int porch_pre_handler(struct kprobe *probe, struct pt_regs *regs)
 	return 0;
 }
 
-static int match_primary_dsi(struct device *dev, const void *data)
-{
-	const char *name = data;
-
-	return dev && name && strcmp(dev_name(dev), name) == 0;
-}
-
 static int call_dsi_io(enum mtk_ddp_io_cmd command, void *params)
 {
 	struct mtk_dsi *dsi = READ_ONCE(state.dsi);
@@ -472,7 +495,14 @@ static int prepare_custom_modes_locked(void)
 	state.custom_ext.dyn.hbp = 16;
 	state.custom_ext.dyn.hfp = 129;
 	state.custom_ext.dyn.max_vfp_for_msync_dyn = 0;
-	state.custom_ext.dyn_fps.vact_timing_fps = 144;
+	/*
+	 * Keep the DDIC/ColorOS panel profile on the verified 120 Hz path.
+	 * The DRM mode above remains a real 144 Hz mode and its dyn.vfp/link
+	 * provide the scan rate; this field is consumed by the vendor timing,
+	 * seed and brightness/HBM policy and must not advertise a new panel
+	 * profile that the stock driver does not have.
+	 */
+	state.custom_ext.dyn_fps.vact_timing_fps = 120;
 	state.custom_ext.dyn_fps.data_rate = 0;
 	state.custom_ext.dyn_fps.data_rate_khz = 0;
 
@@ -594,6 +624,92 @@ static noinline __used int plf110_ext_param_get(
 	if (!ret && base)
 		*params = &state.custom_ext;
 	return ret;
+}
+
+struct plf110_enum_probe_data {
+	struct drm_display_mode *mode;
+};
+
+static int plf110_enum_entry(struct kretprobe_instance *ri,
+	struct pt_regs *regs)
+{
+	struct plf110_enum_probe_data *data =
+		(struct plf110_enum_probe_data *)ri->data;
+
+	data->mode = (struct drm_display_mode *)regs->regs[0];
+	return 0;
+}
+
+static int plf110_enum_ret(struct kretprobe_instance *ri,
+	struct pt_regs *regs)
+{
+	struct plf110_enum_probe_data *data =
+		(struct plf110_enum_probe_data *)ri->data;
+
+	/* Keep the real DRM mode at 144 Hz.  Only the vendor panel profile
+	 * selector sees the verified stock 120 Hz enum, which preserves its
+	 * brightness, seed, HBM and fingerprint tables. */
+	if (data->mode && mode_refresh(data->mode) == 144 &&
+		(int)regs->regs[0] != PLF110_FHD_SDC120) {
+		regs->regs[0] = PLF110_FHD_SDC120;
+		state.enum_fixes++;
+	}
+	return 0;
+}
+
+static int resolve_panel_enum_hook(void)
+{
+	unsigned long anchor = (unsigned long)state.original_panel_get_modes;
+	unsigned long set = (unsigned long)state.original_ext_set;
+
+	if (!anchor || !set)
+		return -ENODEV;
+	state.panel_anchor = anchor;
+	if (anchor + PLF110_P3_DELTA_EXT_PARAM_SET == set) {
+		state.addr_get_mode_enum = anchor + PLF110_P3_DELTA_GET_MODE_ENUM;
+		return 0;
+	}
+	if (anchor + PLF110_P7_DELTA_EXT_PARAM_SET == set) {
+		state.addr_get_mode_enum = anchor + PLF110_P7_DELTA_GET_MODE_ENUM;
+		return 0;
+	}
+	state.addr_get_mode_enum = 0;
+	return -ESTALE;
+}
+
+static int register_panel_enum_hook(void)
+{
+	int ret;
+
+	if (state.enum_hook_registered)
+		return 0;
+	if (!state.addr_get_mode_enum)
+		return -ENODEV;
+	memset(&state.enum_probe, 0, sizeof(state.enum_probe));
+	state.enum_probe.kp.addr =
+		(kprobe_opcode_t *)state.addr_get_mode_enum;
+	state.enum_probe.entry_handler = plf110_enum_entry;
+	state.enum_probe.handler = plf110_enum_ret;
+	state.enum_probe.maxactive = 16;
+	state.enum_probe.data_size = sizeof(struct plf110_enum_probe_data);
+	ret = register_kretprobe(&state.enum_probe);
+	if (ret) {
+		pr_warn("panel enum compatibility hook unavailable at 0x%lx: %d\n",
+			state.addr_get_mode_enum, ret);
+		memset(&state.enum_probe, 0, sizeof(state.enum_probe));
+		return ret;
+	}
+	state.enum_hook_registered = true;
+	pr_info("panel enum compatibility active: 144 -> FHD_SDC120 only inside panel\n");
+	return 0;
+}
+
+static void unregister_panel_enum_hook(void)
+{
+	if (!state.enum_hook_registered)
+		return;
+	unregister_kretprobe(&state.enum_probe);
+	state.enum_hook_registered = false;
 }
 
 static bool custom_in_list(struct list_head *head)
@@ -788,6 +904,9 @@ static int install_hooks(void)
 			plf110_ext_param_get);
 	if (ret)
 		return ret;
+	ret = resolve_panel_enum_hook();
+	if (ret)
+		pr_warn("panel enum compatibility address not verified: %d\n", ret);
 
 	mutex_lock(&dsi->conn.dev->mode_config.mutex);
 	state.stage = 4;
@@ -836,6 +955,9 @@ static int install_hooks(void)
 		return ret;
 	}
 	state.stage = 6;
+	ret = register_panel_enum_hook();
+	if (ret)
+		pr_warn("panel enum compatibility hook skipped: %d\n", ret);
 	pr_info("plf110_144_mode: installed native-compatible 144Hz mode\n");
 	return 0;
 }
@@ -851,6 +973,7 @@ static int remove_hooks(void)
 		return -ENODEV;
 	if (dsi->mipi_hopping_sta || dsi->data_rate == PLF110_144_DATA_RATE)
 		return -EBUSY;
+	unregister_panel_enum_hook();
 	mutex_lock(&dsi->conn.dev->mode_config.mutex);
 	restore_hooks_locked();
 	mutex_unlock(&dsi->conn.dev->mode_config.mutex);
@@ -866,6 +989,97 @@ static int remove_hooks(void)
 		module_put(THIS_MODULE);
 	}
 	return ret;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Optical fingerprint illumination                                          */
+/* ------------------------------------------------------------------------- */
+
+/*
+ * The panel's vendor OFP handler gates LOCAL_HBM on an exact 120 Hz refresh
+ * value when the 30 Hz-AOD FOD flag is present.  At 144 Hz it therefore skips
+ * the HBM/LHBM setup even though the mode timing is otherwise valid.  Keep the
+ * real mode untouched and rewrite only the handler's own drm_mode_vrefresh()
+ * result for this one call chain.  This is the same narrow workaround used by
+ * the reference PLF110 144 Hz implementation.
+ */
+static int ofp_entry(struct kretprobe_instance *ri, struct pt_regs *regs)
+{
+	(void)ri;
+	(void)regs;
+	if (state.ofp_depth++ == 0)
+		WRITE_ONCE(state.ofp_task, current);
+	state.ofp_calls++;
+	return 0;
+}
+
+static int ofp_ret(struct kretprobe_instance *ri, struct pt_regs *regs)
+{
+	(void)ri;
+	(void)regs;
+	if (state.ofp_depth > 0 && --state.ofp_depth == 0)
+		WRITE_ONCE(state.ofp_task, NULL);
+	return 0;
+}
+
+static int vref_ret(struct kretprobe_instance *ri, struct pt_regs *regs)
+{
+	(void)ri;
+	if (!READ_ONCE(ofp_fix) || state.ofp_depth <= 0)
+		return 0;
+	if (READ_ONCE(state.ofp_task) != current)
+		return 0;
+	if ((unsigned int)regs->regs[0] != 144)
+		return 0;
+	/* Only the vendor HBM gate sees 120; the DRM mode remains 144. */
+	regs->regs[0] = 120;
+	state.ofp_fixes++;
+	WRITE_ONCE(state.ofp_task, NULL);
+	pr_info("fingerprint compatibility: OFP refresh 144 -> 120\n");
+	return 0;
+}
+
+static int register_ofp_hooks(void)
+{
+	int ret;
+
+	if (state.ofp_hooks_registered)
+		return 0;
+
+	memset(&state.ofp_probe, 0, sizeof(state.ofp_probe));
+	state.ofp_probe.kp.symbol_name = "oplus_ofp_hbm_handle";
+	state.ofp_probe.entry_handler = ofp_entry;
+	state.ofp_probe.handler = ofp_ret;
+	state.ofp_probe.maxactive = 16;
+	ret = register_kretprobe(&state.ofp_probe);
+	if (ret)
+		return ret;
+
+	memset(&state.vref_probe, 0, sizeof(state.vref_probe));
+	state.vref_probe.kp.symbol_name = "drm_mode_vrefresh";
+	state.vref_probe.handler = vref_ret;
+	state.vref_probe.maxactive = 32;
+	ret = register_kretprobe(&state.vref_probe);
+	if (ret) {
+		unregister_kretprobe(&state.ofp_probe);
+		memset(&state.ofp_probe, 0, sizeof(state.ofp_probe));
+		return ret;
+	}
+
+	state.ofp_hooks_registered = true;
+	pr_info("fingerprint hooks armed; 144 Hz is reported as 120 only to OFP HBM\n");
+	return 0;
+}
+
+static void unregister_ofp_hooks(void)
+{
+	if (state.ofp_hooks_registered) {
+		unregister_kretprobe(&state.vref_probe);
+		unregister_kretprobe(&state.ofp_probe);
+		state.ofp_hooks_registered = false;
+	}
+	WRITE_ONCE(state.ofp_task, NULL);
+	state.ofp_depth = 0;
 }
 
 static int parse_bool_value(const char *value, bool *requested)
@@ -943,6 +1157,8 @@ static int status_get(char *buffer, const struct kernel_param *kp)
 		"mtk_modes=%u panel_enums=%lu injected=%lu fill_calls=%lu "
 		"rebuilds=%lu hotplugs=%lu validation_failures=%lu "
 		"ext_gets=%lu ext_sets=%lu mode_switches=%lu "
+		"enum_hook=%u enum_fixes=%lu "
+		"ofp_hooks=%u ofp_calls=%lu ofp_fixes=%lu "
 		"clock_attempts=%lu clock_switches=%lu data_rate=%u "
 		"hopping=%u d_rate=%u stage=%u validation=%d "
 		"last_rebuild_error=%d last_error=%d\n",
@@ -951,7 +1167,9 @@ static int status_get(char *buffer, const struct kernel_param *kp)
 		3U, modes, modes, state.panel_enums, state.injected,
 		state.fill_calls, state.rebuilds, state.hotplugs,
 		state.validation_failures, state.ext_gets, state.ext_sets,
-		state.mode_switches, state.clock_attempts,
+		state.mode_switches, state.enum_hook_registered, state.enum_fixes,
+		state.ofp_hooks_registered, state.ofp_calls,
+		state.ofp_fixes, state.clock_attempts,
 		state.clock_switches, dsi ? READ_ONCE(dsi->data_rate) : 0,
 		dsi ? READ_ONCE(dsi->mipi_hopping_sta) : 0,
 		dsi ? READ_ONCE(dsi->d_rate) : 0, state.stage, validation,
@@ -1010,7 +1228,6 @@ module_param_cb(modes, &modes_ops, NULL, 0444);
 
 static int __init plf110_144_mode_init(void)
 {
-	struct device *device;
 	int ret;
 
 	state.panel_probe.symbol_name = "drm_panel_get_modes";
@@ -1029,19 +1246,24 @@ static int __init plf110_144_mode_init(void)
 		return ret;
 	}
 	state.porch_probe_registered = true;
+	ret = register_ofp_hooks();
+	if (ret)
+		pr_warn("fingerprint hooks unavailable: %d\n", ret);
 
-	device = bus_find_device(&platform_bus_type, NULL,
-		PLF110_PRIMARY_DSI, match_primary_dsi);
-	if (device) {
-		capture_dsi(dev_get_drvdata(device), "platform scan");
-		put_device(device);
-	}
+	/*
+	 * Do not scan the platform bus from module init.  Both the vendor kernel's
+	 * KCFI callback ABI and its exported device-match helpers vary between
+	 * builds.  The panel/porch kprobes above capture the same DSI instance once
+	 * it is bound, without an indirect bus callback or an extra exported symbol.
+	 */
 	pr_info("plf110_144_mode: loaded disabled; waiting for enable=1\n");
 	return 0;
 }
 
 static void __exit plf110_144_mode_exit(void)
 {
+	unregister_panel_enum_hook();
+	unregister_ofp_hooks();
 	if (state.porch_probe_registered)
 		unregister_kprobe(&state.porch_probe);
 	if (state.panel_probe_registered)
@@ -1081,7 +1303,6 @@ __used __section("__versions") = {
 	{ 0xe1537255, "__list_del_entry_valid" },
 	{ 0x92997ed8, "_printk" },
 	{ 0x1348649e, "alt_cb_patch_nops" },
-	{ 0x78729785, "bus_find_device" },
 	{ 0x263c3152, "bcmp" },
 	{ 0x4531ab62, "copy_from_kernel_nofault" },
 	{ 0x407f8acf, "drm_kms_helper_hotplug_event" },
@@ -1089,14 +1310,15 @@ __used __section("__versions") = {
 	{ 0x88f2da8e, "drm_mode_probed_add" },
 	{ 0x4a35d30d, "drm_mode_set_name" },
 	{ 0x4829a47e, "memcpy" },
+	{ 0xdcb764ad, "memset" },
 	{ 0x28f42c1d, "module_put" },
 	{ 0xd5977bfb, "mutex_lock" },
 	{ 0xed55cabd, "mutex_unlock" },
-	{ 0xdede9e3e, "platform_bus_type" },
-	{ 0xc0052169, "put_device" },
 	{ 0x0472cf3b, "register_kprobe" },
+	{ 0x79345cb9, "register_kretprobe" },
 	{ 0x96848186, "scnprintf" },
 	{ 0xe2d5255a, "strcmp" },
 	{ 0xda2e6300, "try_module_get" },
 	{ 0xeb78b1ed, "unregister_kprobe" },
+	{ 0xce598ef2, "unregister_kretprobe" },
 };
