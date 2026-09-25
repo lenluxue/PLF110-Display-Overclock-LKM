@@ -1,6 +1,6 @@
 {
   "version": "1.12.1-144",
   "versionCode": 243,
-  "zipUrl": "https://github.com/lenluxue/PLF110-Display-Overclock-LKM/releases/download/v1.12.1-144-preview/PLF110-144-v1.12.1-preview.zip",
+  "zipUrl": "https://github.com/lenluxue/PLF110-Display-Overclock-LKM/releases/download/v1.12.1-144-preview/PLF110-144-v1.12.1-preview-ksu-update.zip",
   "changelog": "PLF110 144Hz 预览版；后续发布更高 versionCode 时由 KernelSU 提示更新。"
 }
