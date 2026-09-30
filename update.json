@@ -1,6 +1,6 @@
 {
   "version": "1.12.1-144",
-  "versionCode": 247,
-  "zipUrl": "https://github.com/lenluxue/PLF110-Display-Overclock-LKM/releases/download/v1.12.1-144-preview/PLF110-144-v1.12.1.zip",
-  "changelog": "PLF110 144Hz 正式版：移除 Zygisk 反射桥，修复 144Hz 下指纹无法识别及面板亮度/HBM 配置兼容问题。"
+  "versionCode": 248,
+  "zipUrl": "https://github.com/lenluxue/PLF110-Display-Overclock-LKM/releases/download/v1.12.1-144-preview-248/PLF110-144-v1.12.1-248.zip",
+  "changelog": "修复小窗、缩放窗口和状态栏切换后的 144Hz 刷新率策略。"
 }
