@@ -1,6 +1,6 @@
 {
   "version": "1.12.1-144",
-  "versionCode": 248,
-  "zipUrl": "https://github.com/lenluxue/PLF110-Display-Overclock-LKM/releases/download/v1.12.1-144-preview-248/PLF110-144-v1.12.1-248.zip",
-  "changelog": "修复小窗、缩放窗口和状态栏切换后的 144Hz 刷新率策略。"
+  "versionCode": 249,
+  "zipUrl": "https://github.com/lenluxue/PLF110-Display-Overclock-LKM/releases/download/v1.12.1-144-preview-249/PLF110-144-v1.12.1-249.zip",
+  "changelog": "修复已知bug"
 }
