@@ -1,6 +1,6 @@
 {
   "version": "1.12.1-Stable",
   "versionCode": 251,
-  "zipUrl": "https://github.com/lenluxue/PLF110-Display-Overclock-LKM/releases/download/v1.12.1-Stable/PLF110-144-v1.12.1-Stable.zip",
-  "changelog": "已修复问题：解决了提出问题的人，提升兼容性"
+  "zipUrl": "https://github.com/.../PLF110-144-v1.12.1-Stable.zip",
+  "changelog": "https://raw.githubusercontent.com/lenluxue/PLF110-Display-Overclock-LKM/main/changelog.md"
 }
