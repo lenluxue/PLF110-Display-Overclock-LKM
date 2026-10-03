@@ -2,6 +2,8 @@
 
 中文说明：[README_CN.md](README_CN.md)
 
+![Project image](assets/IMG_20261003_094440.jpg)
+
 License: [GPL-2.0-only](LICENSE)
 
 This repository documents a runtime 144 Hz LKM for the OnePlus Ace 5 Racing

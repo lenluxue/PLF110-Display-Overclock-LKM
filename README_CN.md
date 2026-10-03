@@ -2,6 +2,8 @@
 
 English: [README.md](README.md)
 
+![项目图片](assets/IMG_20261003_094440.jpg)
+
 许可证：[GPL-2.0-only](LICENSE)
 
 本项目是一加 Ace 5 竞速版（PLF110）AA600 面板的运行时 144Hz LKM
