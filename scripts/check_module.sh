@@ -41,7 +41,7 @@ printf '%s\n' "$modinfo" | grep -q 'name=PLF110_Display_OC' || \
 printf '%s\n' "$modinfo" | grep -q \
 	'vermagic=6.1.157-android14-11-o-gc2dad16af736 SMP preempt mod_unload modversions aarch64' || \
 	fail "unexpected vermagic"
-grep -aFq '酷安丛雨颜烬 × OpenAI Codex' "$module" || \
+grep -aFq 'author=lenluxue' "$module" || \
 	fail "missing author attribution"
 
 for symbol in $undefined; do

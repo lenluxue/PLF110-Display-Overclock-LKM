@@ -1,0 +1,40 @@
+<oplus-config>
+    <!-- Add for Eye Protection UI Upgrade -->
+    <oplus-feature name="oplus.software.display.smart_color_temperature_rhythm_health_support"/>
+    <oplus-feature name="oplus.software.display.eyeprotect_with_upgrade_ui"/>
+    <oplus-feature name="oplus.software.display.color_temperature_sensor_disable"/>
+    <!-- brightness feature -->
+    <oplus-feature name="oplus.software.display.brightness_mode_automatic"/>
+    <oplus-feature name="oplus.software.display.multibits_dimming_support"/>
+    <oplus-feature name="oplus.software.display.screen_gloablehbm_support"/>
+    <!-- colormode feature -->
+    <oplus-feature name="oplus.software.display.cinema_mode_support"/>
+    <oplus-feature name="oplus.software.display.colorful_mode_support"/>
+    <oplus-feature name="oplus.software.display.colormode_calibrate_support"/>
+    <oplus-feature name="oplus.software.display.colormode_support"/>
+    <oplus-feature name="oplus.software.display.rgb_ball_support"/>
+    <!-- Add for localhdr -->
+    <oplus-feature name="oplus.software.display.enhance_brightness_with_uidimming"/>
+    <!-- aod feature -->
+    <oplus-feature name="oplus.software.display.aod_support"/>
+    <oplus-feature name="oplus.software.display.aod_prevent_burn_support"/>
+    <oplus-feature name="oplus.software.display.video_mode_aod_support" />
+
+    <!-- aod feature support 30hz for systemui-->
+    <oplus-feature name="oplus.software.display.video_mode_ramless_lhbm_aod_support" />
+    <!-- Add for Game Color Enhance 1.0   -->
+    <oplus-feature name="oplus.software.display.game_color_enhance_1.0"/>
+
+    <!-- sceen fingerprint feature -->
+    <oplus-feature name="oplus.software.fingeprint_optical_enabled"/>
+    <!-- others feature -->
+    <oplus-feature name="oplus.software.display.screen_heteromorphism"/>
+
+    <!-- houchen@MULTIMEDIA.DISPLAY.SF, 2024/12/31, Add for resoultionsiwtch feature -->
+    <oplus-feature name="oplus.software.display.resolution_switch_disableauto_support" />
+    <!-- Add for resolutionswitch feature end -->
+    <!-- Add for motion sickness UI -->
+    <oplus-feature name="oplus.hardware.display.motion_sickness"/>
+    <!-- PLF110: retain the 144 Hz option in ColorOS per-app refresh settings. -->
+    <oplus-feature name="oplus.software.performance.enable_high_refresh_rate"/>
+</oplus-config>

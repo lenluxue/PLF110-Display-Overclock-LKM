@@ -119,6 +119,7 @@ struct plf110_state {
 	bool enum_hook_registered;
 	unsigned long panel_anchor;
 	unsigned long addr_get_mode_enum;
+	int enum_resolve_error;
 	unsigned long enum_fixes;
 	/* Optical fingerprint illumination compatibility for the 144 Hz mode. */
 	struct kretprobe ofp_probe;
@@ -667,14 +668,28 @@ static int resolve_panel_enum_hook(void)
 	state.panel_anchor = anchor;
 	if (anchor + PLF110_P3_DELTA_EXT_PARAM_SET == set) {
 		state.addr_get_mode_enum = anchor + PLF110_P3_DELTA_GET_MODE_ENUM;
+		state.enum_resolve_error = 0;
 		return 0;
 	}
 	if (anchor + PLF110_P7_DELTA_EXT_PARAM_SET == set) {
 		state.addr_get_mode_enum = anchor + PLF110_P7_DELTA_GET_MODE_ENUM;
+		state.enum_resolve_error = 0;
+		return 0;
+	}
+	/* On this vendor build the function pointers can carry a KCFI landing
+	 * wrapper, so the ext_param_set pointer is not always comparable to the
+	 * section-relative address even though the panel is the known p_3 image.
+	 * The panel name is an independent identity check; use the validated p_3
+	 * delta and retain the mismatch for diagnostics instead of silently losing
+	 * the brightness compatibility hook. */
+	if (state.dsi && panel_name_matches(state.dsi->panel)) {
+		state.addr_get_mode_enum = anchor + PLF110_P3_DELTA_GET_MODE_ENUM;
+		state.enum_resolve_error = -ESTALE;
 		return 0;
 	}
 	state.addr_get_mode_enum = 0;
-	return -ESTALE;
+	state.enum_resolve_error = -ESTALE;
+	return state.enum_resolve_error;
 }
 
 static int register_panel_enum_hook(void)
@@ -1024,7 +1039,20 @@ static int ofp_ret(struct kretprobe_instance *ri, struct pt_regs *regs)
 
 static int vref_ret(struct kretprobe_instance *ri, struct pt_regs *regs)
 {
-	(void)ri;
+	unsigned long ret_addr = get_kretprobe_retaddr(ri);
+
+	/* If the vendor's static get_mode_enum address cannot accept a kretprobe,
+	 * catch its drm_mode_vrefresh call instead.  The return address is inside
+	 * that one panel function, so the real DRM mode remains untouched while
+	 * the panel's mode_id is forced onto the stock 120 profile. */
+	if (!state.enum_hook_registered && state.addr_get_mode_enum &&
+		ret_addr >= state.addr_get_mode_enum &&
+		ret_addr < state.addr_get_mode_enum + 0x200 &&
+		(unsigned int)regs->regs[0] == 144) {
+		regs->regs[0] = 120;
+		state.enum_fixes++;
+		return 0;
+	}
 	if (!READ_ONCE(ofp_fix) || state.ofp_depth <= 0)
 		return 0;
 	if (READ_ONCE(state.ofp_task) != current)
@@ -1157,7 +1185,7 @@ static int status_get(char *buffer, const struct kernel_param *kp)
 		"mtk_modes=%u panel_enums=%lu injected=%lu fill_calls=%lu "
 		"rebuilds=%lu hotplugs=%lu validation_failures=%lu "
 		"ext_gets=%lu ext_sets=%lu mode_switches=%lu "
-		"enum_hook=%u enum_fixes=%lu "
+		"enum_hook=%u enum_fixes=%lu enum_resolve=%d "
 		"ofp_hooks=%u ofp_calls=%lu ofp_fixes=%lu "
 		"clock_attempts=%lu clock_switches=%lu data_rate=%u "
 		"hopping=%u d_rate=%u stage=%u validation=%d "
@@ -1168,6 +1196,7 @@ static int status_get(char *buffer, const struct kernel_param *kp)
 		state.fill_calls, state.rebuilds, state.hotplugs,
 		state.validation_failures, state.ext_gets, state.ext_sets,
 		state.mode_switches, state.enum_hook_registered, state.enum_fixes,
+		state.enum_resolve_error,
 		state.ofp_hooks_registered, state.ofp_calls,
 		state.ofp_fixes, state.clock_attempts,
 		state.clock_switches, dsi ? READ_ONCE(dsi->data_rate) : 0,
@@ -1276,7 +1305,7 @@ module_init(plf110_144_mode_init);
 module_exit(plf110_144_mode_exit);
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("酷安丛雨颜烬 × OpenAI Codex");
+MODULE_AUTHOR("lenluxue");
 MODULE_DESCRIPTION("Runtime PLF110 AA600 native-compatible 144Hz display mode");
 MODULE_INFO(name, KBUILD_MODNAME);
 MODULE_INFO(depends, "");

@@ -123,6 +123,23 @@ indirect-call instrumentation, and the validated timing/link constants.
 
 The large OnePlusOSS trees are external inputs and are not vendored here.
 
+### Tested KernelSU/Magisk package
+
+The `module/` directory mirrors the tested `v1.12.1-Stable` package, including
+the root scripts, ColorOS feature XML, the known-good LKM, and the prebuilt
+Zygisk bridge used by that release. Build and check the LKM first, then package
+it with:
+
+```sh
+sh scripts/package_module.sh
+```
+
+The script prefers `out/PLF110_144_Mode.ko`; when no fresh build exists it
+packages the checked-in release LKM. Set `PLF110_KO=/path/to/module.ko` to
+select another already-checked module. The Zygisk bridge is intentionally kept
+as a prebuilt release component because its source is not part of this LKM
+repository.
+
 ## Runtime interface
 
 The module loads disabled and exposes:
