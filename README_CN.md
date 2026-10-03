@@ -159,21 +159,6 @@ sh scripts/check_module.sh
 作者信息、外部符号白名单、每个导入符号的 CRC、KCFI 间接调用保护，以及
 源码中的已验证 144Hz 时序与 1395Mbps 链路常量。
 
-### 打包已测试版本
-
-`module/` 是当前已实测的 `v1.12.1-Stable` KernelSU/Magisk 包镜像，包含根
-目录脚本、ColorOS 特性 XML、已知可用的 LKM，以及该版本使用的预编译
-Zygisk 桥。完成编译和检查后执行：
-
-```sh
-sh scripts/package_module.sh
-```
-
-脚本优先使用 `out/PLF110_144_Mode.ko`；没有新的编译产物时，自动使用仓库
-中随附的已测试 LKM。也可以用 `PLF110_KO=/path/to/module.ko` 指定已经检查
-过的模块。Zygisk 桥目前只作为预编译发行组件保存，因为它的源码不在这个
-LKM 仓库中。
-
 ## 运行接口
 
 模块默认只捕获 DSI，不立即安装 144Hz。对应 sysfs：

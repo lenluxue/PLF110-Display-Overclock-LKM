@@ -6,8 +6,3 @@
 *.mod.c
 Module.symvers
 modules.order
-
-# The tested KernelSU/Magisk module contains a known-good prebuilt LKM.
-# Build outputs under out/ remain ignored; only the release mirror is tracked.
-!/module/
-!/module/*.ko

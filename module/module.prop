@@ -1,7 +1,0 @@
-id=plf110_display_oc
-name=PLF110 Display Overclock
-version=1.12.1-144
-versionCode=251
-author=酷安丛雨颜烬 & Codex
-description=为一加Ace5竞速版提供144刷新率
-updateJson=https://raw.githubusercontent.com/lenluxue/PLF110-Display-Overclock-LKM/main/update.json
