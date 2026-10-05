@@ -195,6 +195,18 @@ LKM 只负责让内核 DRM/MTK 显示栈真实拥有 144Hz。ColorOS 是否把�
 4. 在模块 `system.prop` 中声明 `ro.oplus.refreshrate.maxsettings=4`，让
    ColorOS 设置的“自定义应用刷新率”保留原生 144Hz / ID 4 选项；
 5. 写入前验证，卸载时恢复备份。
+6. 统一全局上限：ColorOS 会在开机完成后把 `peak_refresh_rate` 改回 120，使
+   XML 中的 144Hz 条目被 DisplayModeDirector 截断回 120；需要在启动窗口内
+   重复校准，最终保持 `peak_refresh_rate=144`、`user_refresh_rate=144`；
+7. 应用分档：未被名单覆盖的应用走 120Hz（`3-1-2-3`），短视频应用走 60Hz
+   （`2-2-2-2`），游戏走 144Hz（`4-1-2-3`）；
+8. 部分游戏（暗区突围、三角洲行动等）只有在“自定义应用刷新率”中显式选中
+   144Hz 时才会放开自身的高帧率选项，需要在用户覆盖文件
+   `/data/system/refresh_rate_config_user_override.xml` 中写入 `0-0-0-4`
+   （四段依次对应 自动 / 90 / 60 / 120，第四段即 144）。
+
+用户覆盖文件在首次写入前备份，卸载时恢复。Release 页面提供的 ZIP 由
+`update.json` 指向最新构建，root 管理器据此检测版本更新。
 
 不要在仓库里放一份手写的完整 XML 覆盖所有系统规则。ROM 更新后，原厂 XML
 可能变化，始终应以设备当前文件为基线。

@@ -158,6 +158,20 @@ runtime file on uninstall. Its `system.prop` should also set
 entry in ColorOS's per-app refresh-rate menu. Do not ship a hand-written
 replacement XML.
 
+A released companion module also has to:
+
+- keep the global cap at 144 Hz: ColorOS rewrites `peak_refresh_rate` back to
+  120 shortly after boot, after which DisplayModeDirector clamps every 144 Hz
+  XML entry back to 120, so the cap is re-applied during the boot window;
+- split apps by policy: 120 Hz default (`3-1-2-3`), 60 Hz for short-video apps
+  (`2-2-2-2`) and 144 Hz for games (`4-1-2-3`);
+- write `0-0-0-4` into `/data/system/refresh_rate_config_user_override.xml`
+  for games that only unlock their own high-frame-rate option once the per-app
+  refresh rate is set to 144 Hz (the four fields are auto / 90 / 60 / 120).
+
+The user override file is backed up before the first write and restored on
+uninstall. `update.json` points the root manager at the newest release asset.
+
 That property does not invent a display mode. It is valid only after DRM,
 Android's display cache, and the ColorOS configuration all expose the real
 ID 4 mode. See [companion/README.md](companion/README.md) for the framework
