@@ -6,8 +6,6 @@
  * derived from MTK-Display-Overclock-LKM by Yunnijian.  Its PMB110 reference
  * source credits Smartisan_Apple_Kt.  Thank you both for publishing a useful
  * GPL reference for the MTK display community.
- *
- * PLF110 adaptation: 酷安丛雨颜烬 × OpenAI Codex.
  */
 
 #define OPLUS_FEATURE_DISPLAY 1
