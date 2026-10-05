@@ -2,6 +2,22 @@
 
 > lenluxue
 
+## [1.12.1-Stable-268] - 2026-10-05
+
+### Added
+- 合并 MTK Perf 配置，原作者：toolfor
+- 保留音量键安装配置：GPU 温度限频和峰值功耗限制可分别选择
+- 检测独立 mtk_temp 模块；检测到时请求 KernelSU 卸载后再安装合并版
+
+### Changed
+- 保留 MTK Perf 的 ODM 性能与温控配置
+- 继续保留普通应用 120Hz、短视频 60Hz、游戏 144Hz 策略
+- 本版 ZIP 经过语法和完整性校验
+
+### Compatibility
+- 仅支持 PLF110；安装后请手动重启设备
+- GPU 温度限频和峰值功耗选项默认保持关闭状态
+
 ## [1.12.1-Stable-267] - 2026-10-05
 
 ### Added
