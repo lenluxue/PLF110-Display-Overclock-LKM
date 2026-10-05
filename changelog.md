@@ -6,8 +6,9 @@
 
 ### Added
 - 合并 MTK Perf 配置，原作者：toolfor
-- 音量键安装配置Mtk Perf：GPU 温度限频和峰值功耗限制可分别选择
-- 检测是否安装独立 mtk_temp 模块；检测到时请求 KernelSU 卸载后再安装合并版
+- 添加配置Mtk Perf：GPU 温度限频和峰值功耗限制可分别选择
+- 检测是否已有独立 mtk_temp 模块；检测到时请求
+root管理器卸载后再安装合并版
 
 ### Changed
 - 保留 MTK Perf 的 ODM 性能与温控配置
