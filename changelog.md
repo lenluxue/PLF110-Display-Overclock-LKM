@@ -1,5 +1,11 @@
-## [1.12.1-Stable-266] - 2026-10-05
+## [1.12.1-Stable-267] - 2026-10-05
+
+![PLF110 144Hz](https://raw.githubusercontent.com/lenluxue/PLF110-Display-Overclock-LKM/main/assets/IMG_20261003_094440.jpg)
+
+> 图片渲染测试：KernelSU Manager 更新日志应显示上方图片。
+
 ### Added
+- KernelSU Manager 更新日志加入远程图片渲染测试
 - 应用刷新率策略：普通应用 120Hz、短视频 60Hz、游戏 144Hz
 - 全部游戏写入自定义应用刷新率的 144Hz 预设（原厂游戏区 + 扩展名单，共 174 个包）
 ### Fixed
