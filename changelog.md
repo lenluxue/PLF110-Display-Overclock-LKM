@@ -1,8 +1,8 @@
-## [1.12.1-Stable-267] - 2026-10-05
-
 ![PLF110 144Hz](https://raw.githubusercontent.com/lenluxue/PLF110-Display-Overclock-LKM/main/assets/IMG_20261003_094440.jpg)
 
-> 图片渲染测试：KernelSU Manager 更新日志应显示上方图片。
+> lenluxue
+
+## [1.12.1-Stable-267] - 2026-10-05
 
 ### Added
 - KernelSU Manager 更新日志加入远程图片渲染测试
