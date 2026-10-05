@@ -1,0 +1,7 @@
+id=plf110_display_oc
+name=PLF110 Display Overclock
+version=1.12.1-144-Beta
+versionCode=266
+author=lenluxue
+description=144Hz + 应用刷新率策略（所有游戏自定义应用144Hz，普通120Hz、短视频60Hz）
+updateJson=https://raw.githubusercontent.com/lenluxue/PLF110-Display-Overclock-LKM/main/update.json
