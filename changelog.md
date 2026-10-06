@@ -5,7 +5,7 @@
 ## [1.12.1-Stable-273] - 2026-10-06
 
 ### Fixed
-- 修复旧版使用不存在的 `/sys/kernel/thermal/gpt`，导致 GPU 温度限频关闭未生效的问题。
+- 修复MTK Perf使用不存在的 `/sys/kernel/thermal/gpt`，导致 GPU 温度限频关闭未生效的问题。
 - 改用 `/proc/gpufreqv2/limit_table`，按 `THERMAL_AP` / `THERMAL_EB` 名称动态识别 limiter，并关闭 GPU 温度 ceiling。
 - 修正 PPB 状态回读判断，避免 `ppb_mode: 2` 与 `mode 2` 格式差异导致每秒重复写入。
 
