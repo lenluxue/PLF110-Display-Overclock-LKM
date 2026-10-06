@@ -2,6 +2,22 @@
 
 > lenluxue
 
+## [1.12.1-Stable-273] - 2026-10-06
+
+### Fixed
+- 修复旧版使用不存在的 `/sys/kernel/thermal/gpt`，导致 GPU 温度限频关闭未生效的问题。
+- 改用 `/proc/gpufreqv2/limit_table`，按 `THERMAL_AP` / `THERMAL_EB` 名称动态识别 limiter，并关闭 GPU 温度 ceiling。
+- 修正 PPB 状态回读判断，避免 `ppb_mode: 2` 与 `mode 2` 格式差异导致每秒重复写入。
+
+### Compatibility
+- 已对 Android 15 / Android 16 的 MT6989 公开内核模块源码进行复核，关键 GPU limiter 接口一致。
+- 不固定 limiter ID；没有 gpufreqv2 接口时回退旧 `/sys/kernel/thermal/gpt` 节点。
+- 已在 Android 16、内核 `6.1.157` 实机刷入重启验证：GPU 温控 `THERMAL_AP` / `THERMAL_EB` 的 `c_enable=0`，PPB 为 `ppb_mode: 2`。
+
+### Verified
+- 144Hz LKM 状态：`installed=1`、`hooks=3/3`、`modes=5`、`validation_failures=0`。
+- 资产 SHA-256：`ae08ad9936d606a2c524c327127d543ac8f1167d95fb2b29c168740a24faa191`。
+
 ## [1.12.1-Stable-268] - 2026-10-05
 
 ### Added
