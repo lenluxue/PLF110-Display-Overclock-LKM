@@ -67,7 +67,7 @@ English: [README.md](README.md)
 | 90Hz | 387072 kHz | 1080/1260/1264/1280 | 2392/3304/3306/3360 | 原厂 1162 Mbps |
 | 120Hz | 387072 kHz | 1080/1260/1264/1280 | 2392/2464/2466/2520 | 原厂 1162 Mbps |
 | 30Hz | 241920 kHz | 1080/3180/3184/3200 | 2392/2464/2466/2520 | 原厂 1162 Mbps |
-| 144Hz | 464486 kHz | 1080/1209/1213/1229 | 2392/2569/2571/2625 | 动态 1385 Mbps |
+| 144Hz | 464486 kHz | 1080/1209/1213/1229 | 2392/2569/2571/2625 | 动态 1375 Mbps |
 
 表中时序顺序分别为：
 
@@ -86,14 +86,14 @@ V: vdisplay / vsync_start / vsync_end / vtotal
 
 ```text
 switch_en = 1
-data_rate = 1385 Mbps
+data_rate = 1375 Mbps
 vsa/vbp/vfp = 2/54/177
 hsa/hbp/hfp = 4/16/129
 dyn_fps.vact_timing_fps = 144
 ```
 
 顶层 `pll_clk=581`、`data_rate=1162` 和原厂 DSC/ESD/指纹/HBM 配置保持不变；
-进入 144Hz 时通过 MTK `MIPI_HOPPING` 切到 1385Mbps，离开 144Hz 时恢复
+进入 144Hz 时通过 MTK `MIPI_HOPPING` 切到 1375Mbps，离开 144Hz 时恢复
 1162Mbps。DDIC 仍执行已验证的 120Hz 命令表，而不是发送自造的面板命令。
 
 ## 实现原理
@@ -157,7 +157,7 @@ sh scripts/check_module.sh
 成功产物为 `out/PLF110_144_Mode.ko`，内核内部模块名默认为
 `PLF110_Display_OC`。检查脚本会验证 ELF 架构、vermagic、模块名、许可证、
 作者信息、外部符号白名单、每个导入符号的 CRC、KCFI 间接调用保护，以及
-源码中的已验证 144Hz 时序与 1385Mbps 链路常量。
+源码中的已验证 144Hz 时序与 1375Mbps 链路常量。
 
 ## 运行接口
 
