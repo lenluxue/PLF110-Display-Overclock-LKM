@@ -64,7 +64,7 @@ only the host timing and dynamic MIPI parameters.
 | 90 Hz | 387072 kHz | 1080/1260/1264/1280 | 2392/3304/3306/3360 | stock 1162 Mbps |
 | 120 Hz | 387072 kHz | 1080/1260/1264/1280 | 2392/2464/2466/2520 | stock 1162 Mbps |
 | 30 Hz | 241920 kHz | 1080/3180/3184/3200 | 2392/2464/2466/2520 | stock 1162 Mbps |
-| 144 Hz | 464486 kHz | 1080/1209/1213/1229 | 2392/2569/2571/2625 | dynamic 1395 Mbps |
+| 144 Hz | 464486 kHz | 1080/1209/1213/1229 | 2392/2569/2571/2625 | dynamic 1385 Mbps |
 
 The nominal host refresh is:
 
@@ -73,7 +73,7 @@ The nominal host refresh is:
 ```
 
 The custom dynamic parameters are `VSA/VBP/VFP=2/54/177`,
-`HSA/HBP/HFP=4/16/129`, `data_rate=1395`, and
+`HSA/HBP/HFP=4/16/129`, `data_rate=1385`, and
 `dyn_fps.vact_timing_fps=144`. Top-level stock PLL/data-rate, DSC, DDIC, ESD,
 fingerprint, and brightness data remain cloned from the original 120 Hz mode.
 
@@ -91,7 +91,7 @@ driver creates modes in `lcm_get_modes()`, so this implementation:
    and `fill_modes` to append and order the custom mode.
 5. Wraps `ext_param_set/get`; a 144 Hz request first travels through the stock
    120 Hz DDIC path, then selects the cloned 144 Hz host parameters.
-6. Installs `mode_switch_update_for_vdo` to switch MIPI hopping to 1395 Mbps on
+6. Installs `mode_switch_update_for_vdo` to switch MIPI hopping to 1385 Mbps on
    entry and back to 1162 Mbps on exit, with post-switch state validation.
 7. Rebuilds the MTK connector/CRTC mode cache and emits a DRM hotplug event.
 8. Holds a module reference while callbacks are installed so live function

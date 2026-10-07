@@ -62,7 +62,7 @@ struct mtk_drm_crtc;
 
 #define PLF110_BASE_PLL_CLK 581
 #define PLF110_BASE_DATA_RATE 1162
-#define PLF110_144_DATA_RATE 1410
+#define PLF110_144_DATA_RATE 1385
 
 /* The panel vendor module keeps get_mode_enum and ext_param_set in the same
  * text section.  Cross-checking the latter lets us derive the former without
@@ -1304,7 +1304,7 @@ module_exit(plf110_144_mode_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("lenluxue");
-MODULE_DESCRIPTION("Runtime PLF110 AA600 native-compatible 144Hz display mode on 1410 Mbps link");
+MODULE_DESCRIPTION("Runtime PLF110 AA600 native-compatible 144Hz display mode on 1385 Mbps link");
 MODULE_INFO(name, KBUILD_MODNAME);
 MODULE_INFO(depends, "");
 MODULE_INFO(vermagic, PLF110_VERMAGIC);
