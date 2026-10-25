@@ -131,9 +131,15 @@ for normalized in \
 		fail "missing normalized vendor callback call-site KCFI type: $normalized"
 done
 
-grep -Fq '#define PLF110_144_DATA_RATE 1375' \
+grep -Fq '#define PLF110_144_DATA_RATE 1399' \
 	"$project_root/src/PLF110_144_Mode.c" || \
-	fail "source no longer declares the validated 1375 Mbps link"
+	fail "source no longer declares the 1399 Mbps link"
+link_immediates=$("$objdump" -d "$module" | grep -c 'mov.*#0x577' || true)
+[ "$link_immediates" -eq 2 ] || \
+	fail "module does not contain both 1399 Mbps link constants"
+if "$objdump" -d "$module" | grep -q 'mov.*#0x55f'; then
+	fail "old 1375 Mbps link constant remains"
+fi
 grep -Fq 'state.custom_ext.dyn_fps.vact_timing_fps = 120;' \
 	"$project_root/src/PLF110_144_Mode.c" || \
 	fail "144 panel profile no longer stays on the stock 120 Hz policy"
