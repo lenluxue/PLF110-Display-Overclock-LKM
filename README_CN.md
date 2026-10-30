@@ -16,6 +16,11 @@ English: [README.md](README.md)
 该发行包的 KO 参数、回调路径与配套 HWC 生效流程见
 [Stable-278 KO 实现说明](docs/Stable-278-KO.md)。
 
+支持在 144Hz 显示模式下使用屏下指纹识别和解锁。指纹兼容逻辑仅让厂商
+OFP/HBM 路径读取原厂 120Hz 配置，DRM 的 144Hz 模式继续保留。
+安装、配置文件、启动守卫、日志清理和卸载恢复见
+[Stable-278 配套模块说明](docs/Stable-278-Module.md)。
+
 > [!WARNING]
 > 屏幕超频存在花屏、闪屏、绿屏、显示链路超时、无法亮屏甚至设备无法正常
 > 启动的风险。本代码只对应下述精确软件与内核 ABI。相同机型换内核、换 ROM
@@ -189,16 +194,26 @@ cat /sys/module/PLF110_Display_OC/parameters/modes
 `status` 应出现 `installed=1`、`captured=1`、`modes=5`；`modes` 中应出现
 `1080x2392@144`。如果检查失败，不要反复写 `enable=1`，先保存 dmesg 和状态。
 
-## ColorOS 系统接管
+## ColorOS 版本说明
+
+**ColorOS 17：**按维护者在 PLF110 上的使用情况，可跳过下面的“ColorOS 系统接管”
+适配，无需额外编写 ColorOS 16 的接管逻辑。保留 KO 注入、模式枚举和必要的
+HWC 刷新；是否采用游戏/视频默认分档由模块策略决定。
+
+Stable-278 历史发行包仍包含旧版配置处理和请求守护，尚未按 ColorOS 17 自动
+跳过这些步骤。这里是按系统版本区分的接入说明，本次未修改发行包。
+
+<details>
+<summary>ColorOS 16：系统接管适配与历史包策略</summary>
 
 LKM 只负责让内核 DRM/MTK 显示栈真实拥有 144Hz。ColorOS 是否把它作为智能
 最高档，还取决于系统自己的刷新率配置和 DisplayModeDirector 上限。
 
-配套模块应在每次开机时：
+Stable-278 配套模块的历史实现如下：
 
 1. 从设备当前 `/my_product/etc/refresh_rate_config.xml` 复制原厂文件；
-2. 只微调 `maxrefreshsettings` 与 `defaultMaxRate`；
-3. 保留所有 OEM 应用、场景、VRR 与 ADFR 策略；
+2. 修改 `maxrefreshsettings` 与 `defaultMaxRate`，并按后面的分档规则修改应用条目；
+3. 以当前 OEM 文件为基线，保留未修改的场景、VRR 与 ADFR 规则；
 4. 在模块 `system.prop` 中声明 `ro.oplus.refreshrate.maxsettings=4`，让
    ColorOS 设置的“自定义应用刷新率”保留原生 144Hz / ID 4 选项；
 5. 写入前验证，卸载时恢复备份。
@@ -225,6 +240,8 @@ LKM 只负责让内核 DRM/MTK 显示栈真实拥有 144Hz。ColorOS 是否把�
 再用该属性决定应用刷新率菜单的最高原生 ID；只有 DRM、Android 显示缓存和
 ColorOS 配置均已识别 ID 4 时，它才应设为 `4`。详细分析见
 [companion/README_CN.md](companion/README_CN.md)。
+
+</details>
 
 ## ABI、KCFI 与 CRC
 

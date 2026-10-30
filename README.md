@@ -16,6 +16,12 @@ The current reference is Stable-278: 464486 kHz pixel clock and a 1399 Mbps
 custom link. See [Stable-278 KO implementation notes](docs/Stable-278-KO.md)
 for the release hashes, callback flow, and companion HWC refresh sequence.
 
+Fingerprint recognition and unlocking work while the display uses the 144 Hz
+mode. The OFP/HBM compatibility hook selects the stock 120 Hz panel profile
+locally; it leaves the DRM 144 Hz mode intact. Installation, configuration,
+boot guards, log retention, and uninstall behavior are documented in
+[Stable-278 companion module notes](docs/Stable-278-Module.md).
+
 > [!WARNING]
 > Display overclocking can cause green tint, flicker, split-screen corruption,
 > DSI timeouts, a black screen, or a boot failure. This code targets the exact
@@ -157,19 +163,32 @@ cat /sys/module/PLF110_Display_OC/parameters/modes
 A healthy installation reports `installed=1`, `captured=1`, and `modes=5`,
 and lists `1080x2392@144`.
 
-## ColorOS policy integration
+## ColorOS versions
+
+**ColorOS 17:** according to the maintainer's PLF110 usage, the extra ColorOS
+16 policy integration below can be skipped. Keep KO injection, mode
+enumeration, and any required HWC refresh. Game/video defaults remain a
+separate policy choice.
+
+The existing Stable-278 ZIP still runs its historical policy processing and
+request watchdog; it does not automatically skip them on ColorOS 17. This
+version guidance does not change the release package.
+
+<details>
+<summary>ColorOS 16: policy integration and historical release behavior</summary>
 
 The LKM makes 144 Hz real in DRM/MTK. ColorOS smart-mode ownership also depends
 on its refresh-rate XML and Android rendering caps. A companion root module
-should copy the current device's `/my_product/etc/refresh_rate_config.xml` on
-every boot and modify only the maximum/default fields after validation. It
-must preserve OEM app, scene, VRR, and ADFR rules and restore the previous
+copies the current device's `/my_product/etc/refresh_rate_config.xml` on
+every boot, updates the maximum/default fields and selected app entries,
+and validates the result. It keeps unmodified OEM scene, VRR, and ADFR rules
+and restores the previous
 runtime file on uninstall. Its `system.prop` should also set
 `ro.oplus.refreshrate.maxsettings=4`, which keeps the native 144 Hz / ID 4
 entry in ColorOS's per-app refresh-rate menu. Do not ship a hand-written
 replacement XML.
 
-A released companion module also has to:
+Stable-278's historical companion module also:
 
 - keep the global cap at 144 Hz: ColorOS rewrites `peak_refresh_rate` back to
   120 shortly after boot, after which DisplayModeDirector clamps every 144 Hz
@@ -191,6 +210,8 @@ That property does not invent a display mode. It is valid only after DRM,
 Android's display cache, and the ColorOS configuration all expose the real
 ID 4 mode. See [companion/README.md](companion/README.md) for the framework
 decision path and verification notes.
+
+</details>
 
 ## ABI notes
 

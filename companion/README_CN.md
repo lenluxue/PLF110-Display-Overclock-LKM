@@ -3,6 +3,14 @@
 这个目录记录 PLF110 配套 root 模块需要提供的最小属性。它不能替代 LKM，
 也不应单独用于没有真实 144Hz DRM 模式的设备。
 
+**ColorOS 17 用户：**按维护者在 PLF110 上的使用情况，可以跳过本页的旧版
+“系统接管”接入，无需额外编写 ColorOS 16 的属性与配置适配。
+KO 注入和显示栈重新枚举仍需完成。现有 Stable-278 包并未实现按系统版本
+自动关闭旧策略，本页说明不等同于发行包已经移除了这些步骤。
+
+下面的属性及设置路径说明对应 ColorOS 16。
+完整配套模块流程见 [Stable-278 配套模块说明](../docs/Stable-278-Module.md)。
+
 ## 为什么系统已经识别 144Hz，应用设置仍只有 120Hz
 
 ColorOS 16 的设置程序会从 `Display.getSupportedModes()` 构造可用档位，因此
@@ -27,15 +35,15 @@ PLF110 原厂没有 `oplus.software.performance.enable_high_refresh_rate`
 feature。若应用默认上限不是 ID 4，设置程序会从自定义应用刷新率列表移除
 144Hz，即使 `dumpsys display` 已经能看到该模式。
 
-配套模块必须在 Zygote 启动前通过 `system.prop` 设置：
+旧版配套模块在 Zygote 启动前通过 `system.prop` 设置：
 
 ```properties
 ro.oplus.refreshrate.maxsettings=4
 ```
 
-这样设置程序会把 ID 4 作为设备原生最高应用档位保留下来。现有 Zygisk
-system_server 桥仍负责同步 ColorOS/Android 的运行时上限；无需修改 Settings
-APK、注入应用白名单或替换原厂完整 XML。
+这个属性与发行包内的 feature 配置共同保留 144Hz 菜单；属性本身不能制造
+刷新率档位。完整配套包还会生成基于 OEM 的刷新率 XML、处理部分应用条目
+和运行时上限，无需修改 Settings APK。
 
 ## 必要前提
 
