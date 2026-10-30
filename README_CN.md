@@ -12,6 +12,10 @@ English: [README.md](README.md)
 60/90/120/30Hz 模式、指纹、高亮度模式以及 ColorOS 的 VRR/ADFR 管理接口
 继续沿用原始驱动。
 
+当前正式基准为 Stable-278：像素时钟 `464486kHz`，自定义链路 `1399Mbps`。
+该发行包的 KO 参数、回调路径与配套 HWC 生效流程见
+[Stable-278 KO 实现说明](docs/Stable-278-KO.md)。
+
 > [!WARNING]
 > 屏幕超频存在花屏、闪屏、绿屏、显示链路超时、无法亮屏甚至设备无法正常
 > 启动的风险。本代码只对应下述精确软件与内核 ABI。相同机型换内核、换 ROM
@@ -67,7 +71,7 @@ English: [README.md](README.md)
 | 90Hz | 387072 kHz | 1080/1260/1264/1280 | 2392/3304/3306/3360 | 原厂 1162 Mbps |
 | 120Hz | 387072 kHz | 1080/1260/1264/1280 | 2392/2464/2466/2520 | 原厂 1162 Mbps |
 | 30Hz | 241920 kHz | 1080/3180/3184/3200 | 2392/2464/2466/2520 | 原厂 1162 Mbps |
-| 144Hz | 464486 kHz | 1080/1209/1213/1229 | 2392/2569/2571/2625 | 动态 1375 Mbps |
+| 144Hz | 464486 kHz | 1080/1209/1213/1229 | 2392/2569/2571/2625 | 动态 1399 Mbps |
 
 表中时序顺序分别为：
 
@@ -86,15 +90,17 @@ V: vdisplay / vsync_start / vsync_end / vtotal
 
 ```text
 switch_en = 1
-data_rate = 1375 Mbps
+data_rate = 1399 Mbps
 vsa/vbp/vfp = 2/54/177
 hsa/hbp/hfp = 4/16/129
-dyn_fps.vact_timing_fps = 144
+dyn_fps.vact_timing_fps = 120
 ```
 
 顶层 `pll_clk=581`、`data_rate=1162` 和原厂 DSC/ESD/指纹/HBM 配置保持不变；
-进入 144Hz 时通过 MTK `MIPI_HOPPING` 切到 1375Mbps，离开 144Hz 时恢复
+进入 144Hz 时通过 MTK `MIPI_HOPPING` 切到 1399Mbps，离开 144Hz 时恢复
 1162Mbps。DDIC 仍执行已验证的 120Hz 命令表，而不是发送自造的面板命令。
+DRM 的新增模式采用 144Hz 时序，`dyn_fps.vact_timing_fps` 则继续保持 120，
+供厂商亮度、指纹和面板命令路径选择原厂配置。
 
 ## 实现原理
 
@@ -102,8 +108,8 @@ PLF110 与 PMB110 的面板数据结构不同，不能只替换设备名。原�
 `lcm_get_modes()` 中调用 `drm_mode_duplicate()` 动态创建模式，因此本实现使用
 以下路径：
 
-1. 在 `drm_panel_get_modes` 与 `mtk_dsi_porch_setting` 上安装只读 kprobe，
-   同时扫描平台设备 `1420a000.dsi0`，捕获主 DSI 实例。
+1. 在 `drm_panel_get_modes` 与 `mtk_dsi_porch_setting` 上安装 kprobe，
+   校验面板身份后捕获对应 DSI 实例；模块初始化不扫描平台总线。
 2. 检查面板驱动名、原厂四个模式的完整 H/V 时序、像素时钟、基础链路、
    `mtk_panel_params` 和 callback KCFI 类型。
 3. 复制原厂 120Hz 模式与完整 ext 参数，构造一个独立 144Hz 模式；任何基线
@@ -115,8 +121,9 @@ PLF110 与 PMB110 的面板数据结构不同，不能只替换设备名。原�
    DDIC 状态，再把 DSI ext 参数指向 144Hz 副本。
 6. 提供 `mode_switch_update_for_vdo`，只在进入或离开 144Hz 时执行动态
    MIPI hopping，并校验实际 `data_rate` 与 hopping 状态。
-7. 调用 MTK 的 connector/CRTC 重建接口并发送 DRM hotplug，使 Android 显示栈
-   重新读取五个模式；不重启 SurfaceFlinger/HWC。
+7. KO 调用 MTK 的 connector/CRTC 重建接口并发送 DRM hotplug，更新内核模式缓存。
+   Stable-278 的配套 `service.sh` 在 `sys.boot_completed=1` 且开机动画停止后，
+   每次开机重启一次 `vendor.hwcomposer-3-2`，让 HWC 重新枚举新增档位。
 8. 回调安装后增加模块自身引用，避免仍在执行的内核函数指针被强行卸载。
 
 ## 为什么仍然复用 120Hz DDIC 路径
@@ -157,7 +164,7 @@ sh scripts/check_module.sh
 成功产物为 `out/PLF110_144_Mode.ko`，内核内部模块名默认为
 `PLF110_Display_OC`。检查脚本会验证 ELF 架构、vermagic、模块名、许可证、
 作者信息、外部符号白名单、每个导入符号的 CRC、KCFI 间接调用保护，以及
-源码中的已验证 144Hz 时序与 1375Mbps 链路常量。
+源码中的 144Hz 时序与 1399Mbps 链路常量。
 
 ## 运行接口
 
@@ -204,6 +211,9 @@ LKM 只负责让内核 DRM/MTK 显示栈真实拥有 144Hz。ColorOS 是否把�
    144Hz 时才会放开自身的高帧率选项，需要在用户覆盖文件
    `/data/system/refresh_rate_config_user_override.xml` 中写入 `0-0-0-4`
    （四段依次对应 自动 / 90 / 60 / 120，第四段即 144）。
+9. 按生成配置和用户手动选择识别前台 144Hz 应用，通过 ColorOS 的应用请求
+   优先级开关恢复其刷新率请求，处理下拉通知栏或窗口切换后的 120Hz 压制；
+   普通应用仍按原有 120/60Hz 策略运行。
 
 用户覆盖文件在首次写入前备份，卸载时恢复。Release 页面提供的 ZIP 由
 `update.json` 指向最新构建，root 管理器据此检测版本更新。

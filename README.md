@@ -12,6 +12,10 @@ stock panel driver. It appends one validated 144 Hz DRM mode while preserving
 the stock 60/90/120/30 Hz modes and the original ColorOS VRR/ADFR, fingerprint,
 HBM, brightness, DSC, and ESD paths.
 
+The current reference is Stable-278: 464486 kHz pixel clock and a 1399 Mbps
+custom link. See [Stable-278 KO implementation notes](docs/Stable-278-KO.md)
+for the release hashes, callback flow, and companion HWC refresh sequence.
+
 > [!WARNING]
 > Display overclocking can cause green tint, flicker, split-screen corruption,
 > DSI timeouts, a black screen, or a boot failure. This code targets the exact
@@ -64,7 +68,7 @@ only the host timing and dynamic MIPI parameters.
 | 90 Hz | 387072 kHz | 1080/1260/1264/1280 | 2392/3304/3306/3360 | stock 1162 Mbps |
 | 120 Hz | 387072 kHz | 1080/1260/1264/1280 | 2392/2464/2466/2520 | stock 1162 Mbps |
 | 30 Hz | 241920 kHz | 1080/3180/3184/3200 | 2392/2464/2466/2520 | stock 1162 Mbps |
-| 144 Hz | 464486 kHz | 1080/1209/1213/1229 | 2392/2569/2571/2625 | dynamic 1375 Mbps |
+| 144 Hz | 464486 kHz | 1080/1209/1213/1229 | 2392/2569/2571/2625 | dynamic 1399 Mbps |
 
 The nominal host refresh is:
 
@@ -73,8 +77,10 @@ The nominal host refresh is:
 ```
 
 The custom dynamic parameters are `VSA/VBP/VFP=2/54/177`,
-`HSA/HBP/HFP=4/16/129`, `data_rate=1375`, and
-`dyn_fps.vact_timing_fps=144`. Top-level stock PLL/data-rate, DSC, DDIC, ESD,
+`HSA/HBP/HFP=4/16/129`, `data_rate=1399`, and
+`dyn_fps.vact_timing_fps=120`. The DRM timing describes the custom 144 Hz
+mode; the vendor panel profile remains on its stock 120 Hz path.
+Top-level stock PLL/data-rate, DSC, DDIC, ESD,
 fingerprint, and brightness data remain cloned from the original 120 Hz mode.
 
 ## Design
@@ -82,8 +88,9 @@ fingerprint, and brightness data remain cloned from the original 120 Hz mode.
 PLF110 cannot use the PMB110 panel-array technique directly. Its stock panel
 driver creates modes in `lcm_get_modes()`, so this implementation:
 
-1. Captures the primary `mtk_dsi` from read-only probes and a platform-device
-   scan.
+1. Captures the panel's `mtk_dsi` through the `drm_panel_get_modes` and
+   `mtk_dsi_porch_setting` probes, after checking the panel identity.
+   Module initialization does not scan the platform bus.
 2. Validates the exact panel driver, all four stock timings, the base link, the
    ext parameters, and callback KCFI type IDs before modifying pointers.
 3. Clones the stock 120 Hz mode and its complete `mtk_panel_params`.
@@ -91,11 +98,15 @@ driver creates modes in `lcm_get_modes()`, so this implementation:
    and `fill_modes` to append and order the custom mode.
 5. Wraps `ext_param_set/get`; a 144 Hz request first travels through the stock
    120 Hz DDIC path, then selects the cloned 144 Hz host parameters.
-6. Installs `mode_switch_update_for_vdo` to switch MIPI hopping to 1375 Mbps on
+6. Installs `mode_switch_update_for_vdo` to switch MIPI hopping to 1399 Mbps on
    entry and back to 1162 Mbps on exit, with post-switch state validation.
 7. Rebuilds the MTK connector/CRTC mode cache and emits a DRM hotplug event.
 8. Holds a module reference while callbacks are installed so live function
    pointers cannot be unloaded.
+
+The KO rebuilds kernel mode caches. Stable-278's companion `service.sh` then
+waits for `sys.boot_completed=1` and a stopped boot animation before restarting
+`vendor.hwcomposer-3-2` once per boot, so HWC re-enumerates the injected mode.
 
 No unverified DCS command is introduced. Reusing the stable 120 Hz DDIC path is
 intentional and reduces the risk of fingerprint, low-brightness, and HBM
@@ -167,7 +178,11 @@ A released companion module also has to:
   (`2-2-2-2`) and 144 Hz for games (`4-1-2-3`);
 - write `0-0-0-4` into `/data/system/refresh_rate_config_user_override.xml`
   for games that only unlock their own high-frame-rate option once the per-app
-  refresh rate is set to 144 Hz (the four fields are auto / 90 / 60 / 120).
+  refresh rate is set to 144 Hz (the four fields are auto / 90 / 60 / 120);
+- track apps assigned 144 Hz by the generated XML or a manual user choice,
+  enabling ColorOS's app-request priority while those apps are foreground.
+  This helps the app recover from a 120 Hz vote after a notification shade or
+  window transition; ordinary apps keep their existing 120/60 Hz policy.
 
 The user override file is backed up before the first write and restored on
 uninstall. `update.json` points the root manager at the newest release asset.
