@@ -49,7 +49,7 @@ OFP/HBM 路径读取原厂 120Hz 配置，DRM 的 144Hz 模式继续保留。
 | SoC | MediaTek MT6989 |
 | 面板驱动 | `aa600_p_3_a0025_vdo_panel` |
 | DSI 设备 | `1420a000.dsi0` |
-| 系统 | ColorOS 16.1 / Android 16 测试环境 |
+| 系统 | ColorOS 17 / ColorOS 16.1 / Android 16 测试环境 |
 | 内核 | `6.1.157-android14-11-o-gc2dad16af736` |
 | OnePlus 内核分支 | `oneplus/mt6989_b_16.0.0_ace5_race` |
 | 内核源码提交 | `822beed40827f1e9a103bc06ab4714a670080b72` |

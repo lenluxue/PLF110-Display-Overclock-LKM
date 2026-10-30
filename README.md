@@ -51,7 +51,7 @@ recorded in [NOTICE](NOTICE).
 | SoC | MediaTek MT6989 |
 | Panel driver | `aa600_p_3_a0025_vdo_panel` |
 | Primary DSI | `1420a000.dsi0` |
-| Tested software | ColorOS 16.1 / Android 16 environment |
+| Tested software | ColorOS 17 / ColorOS 16.1 / Android 16 environments |
 | Kernel release | `6.1.157-android14-11-o-gc2dad16af736` |
 | OnePlus branch | `oneplus/mt6989_b_16.0.0_ace5_race` |
 | Kernel commit | `822beed40827f1e9a103bc06ab4714a670080b72` |
@@ -165,14 +165,10 @@ and lists `1080x2392@144`.
 
 ## ColorOS versions
 
-**ColorOS 17:** according to the maintainer's PLF110 usage, the extra ColorOS
-16 policy integration below can be skipped. Keep KO injection, mode
+**ColorOS 17:** based on usage on the OnePlus Ace 5 Racing Edition, the extra
+ColorOS 16 policy integration below can be skipped. Keep KO injection, mode
 enumeration, and any required HWC refresh. Game/video defaults remain a
 separate policy choice.
-
-The existing Stable-278 ZIP still runs its historical policy processing and
-request watchdog; it does not automatically skip them on ColorOS 17. This
-version guidance does not change the release package.
 
 <details>
 <summary>ColorOS 16: policy integration and historical release behavior</summary>
@@ -188,17 +184,17 @@ runtime file on uninstall. Its `system.prop` should also set
 entry in ColorOS's per-app refresh-rate menu. Do not ship a hand-written
 replacement XML.
 
-Stable-278's historical companion module also:
+The companion module's historical implementation:
 
-- keep the global cap at 144 Hz: ColorOS rewrites `peak_refresh_rate` back to
+- keeps the global cap at 144 Hz: ColorOS rewrites `peak_refresh_rate` back to
   120 shortly after boot, after which DisplayModeDirector clamps every 144 Hz
   XML entry back to 120, so the cap is re-applied during the boot window;
-- split apps by policy: 120 Hz default (`3-1-2-3`), 60 Hz for short-video apps
+- splits apps by policy: 120 Hz default (`3-1-2-3`), 60 Hz for short-video apps
   (`2-2-2-2`) and 144 Hz for games (`4-1-2-3`);
-- write `0-0-0-4` into `/data/system/refresh_rate_config_user_override.xml`
+- writes `0-0-0-4` into `/data/system/refresh_rate_config_user_override.xml`
   for games that only unlock their own high-frame-rate option once the per-app
   refresh rate is set to 144 Hz (the four fields are auto / 90 / 60 / 120);
-- track apps assigned 144 Hz by the generated XML or a manual user choice,
+- tracks apps assigned 144 Hz by the generated XML or a manual user choice,
   enabling ColorOS's app-request priority while those apps are foreground.
   This helps the app recover from a 120 Hz vote after a notification shade or
   window transition; ordinary apps keep their existing 120/60 Hz policy.
