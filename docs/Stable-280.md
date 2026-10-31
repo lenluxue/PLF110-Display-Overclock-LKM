@@ -20,7 +20,7 @@
 4. 切档过程中按同一 task 的目的档位判断；日常路径按 `data_rate=1399` / hopping 状态判断。
 5. 自身切档目标以精确 params 指针/task 跳过；原函数递归以 ARM64 原调用返回 LR 标记跳过，避免重复衰减且不屏蔽其他线程。
 
-不是每5ms强制抢写背光。trap handler 仅重定向PC，不分配、不睡眠、不直接发送背光。
+trap handler 仅重定向PC，不分配、不睡眠、不直接发送背光。
 保留原厂 OFP/HBM/指纹、guard、vdo_mix 保护；0/1及超出普通亮度范围的请求直通。
 不改 AOD、RECOVERY、ELVSS 等其他命令。
 
