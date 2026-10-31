@@ -95,7 +95,20 @@ for symbol in enable_get status_get modes_get; do
 done
 check_symbol_cfi plf110_panel_get_modes 4ccb5d06
 check_symbol_cfi plf110_connector_fill_modes 9fc1a63b
-check_symbol_cfi plf110_mode_switch_update_for_vdo 9fc1a63b
+if "$nm" "$module" | grep -q ' plf_original_vdo_update$'; then
+ check_symbol_cfi plf_original_vdo_update 9fc1a63b
+ check_symbol_cfi plf_brightness_vdo_update 9fc1a63b
+ check_symbol_cfi phy_pre_handler a6be5dd9
+ for symbol in control_set sync_enable_set; do
+  check_symbol_cfi "$symbol" 63fa7f9c
+ done
+ for symbol in control_get sync_enable_get sync_status_get; do
+  check_symbol_cfi "$symbol" c64c3dfc
+ done
+ grep -aFq 'gain_scale=10' "$module" || fail "missing fractional brightness gain capability"
+else
+ check_symbol_cfi plf110_mode_switch_update_for_vdo 9fc1a63b
+fi
 check_symbol_cfi plf110_ext_param_set 3cf3199f
 check_symbol_cfi plf110_ext_param_get f7ea43f0
 check_symbol_cfi panel_pre_handler a6be5dd9
