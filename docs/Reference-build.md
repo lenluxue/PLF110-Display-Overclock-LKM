@@ -165,10 +165,7 @@ and lists `1080x2392@144`.
 
 ## ColorOS versions
 
-**ColorOS 17:** based on usage on the OnePlus Ace 5 Racing Edition, the extra
-ColorOS 16 policy integration below can be skipped. Keep KO injection, mode
-enumeration, and any required HWC refresh. Game/video defaults remain a
-separate policy choice.
+Current package flow: [Stable-280](Stable-280-Module.md). The historical integration below documents the property/configuration mechanism, not an automatic ROM-version branch.
 
 <details>
 <summary>ColorOS 16: policy integration and historical release behavior</summary>

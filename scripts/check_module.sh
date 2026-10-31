@@ -99,6 +99,11 @@ if "$nm" "$module" | grep -q ' plf_original_vdo_update$'; then
  check_symbol_cfi plf_original_vdo_update 9fc1a63b
  check_symbol_cfi plf_brightness_vdo_update 9fc1a63b
  check_symbol_cfi phy_pre_handler a6be5dd9
+ if "$nm" "$module" | grep -q ' plf_live_io_cmd$'; then
+  check_symbol_cfi live_pre_handler a6be5dd9
+  check_symbol_cfi plf_live_io_cmd fa2253b1
+  grep -aFq 'live_input=raw' "$module" || fail "missing raw-once live brightness capability"
+ fi
  for symbol in control_set sync_enable_set; do
   check_symbol_cfi "$symbol" 63fa7f9c
  done

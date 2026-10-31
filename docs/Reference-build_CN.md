@@ -196,10 +196,7 @@ cat /sys/module/PLF110_Display_OC/parameters/modes
 
 ## ColorOS 版本说明
 
-**ColorOS 17：**在一加Ace5竞速版上的使用情况，可跳过下面的“ColorOS 系统接管”
-适配，无需额外编写 ColorOS 16 的接管逻辑。保留 KO 注入、模式枚举和必要的
-HWC 刷新；是否采用游戏/视频默认分档由模块策略决定。
-
+当前配套流程见 [Stable-280](Stable-280-Module.md)。下方保留属性与配置机制的历史分析，不表示包内有按ROM版本自动跳过的分支。
 
 <details>
 <summary>ColorOS 16：系统接管适配与历史包策略</summary>

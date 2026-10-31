@@ -2,7 +2,4 @@
 
 > lenluxue
 
-## [1.12.1-Stable-279] - 2026-10-31
-
-- 优化 144Hz 切换亮度补偿，默认 93%，支持 0.1% 调节。
-- 更新版本号，精简项目说明。
+[查看完整历史更新日志 · Full changelog](docs/changelog-history.md)

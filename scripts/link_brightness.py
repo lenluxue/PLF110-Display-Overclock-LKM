@@ -39,7 +39,7 @@ def word_offset(elf, symbol):
 
 patches = {
     'plf_brightness_vdo_update':'plf110_mode_switch_update_for_vdo',
-    'phy_pre_handler':'panel_pre_handler',
+    'phy_pre_handler':'panel_pre_handler', 'live_pre_handler':'panel_pre_handler',
     'control_set':'refresh_set', 'sync_enable_set':'refresh_set',
     'control_get':'status_get', 'sync_enable_get':'status_get', 'sync_status_get':'status_get',
 }
@@ -74,6 +74,19 @@ for sec in e.iter_sections():
                 data[at:at+8] = new_pair
                 io_sites.append((sec.name,off))
 assert len(io_sites)==2, io_sites
+# New intercepted IO signature must match the actual current vendor ABI tag.
+at=word_offset(e,names['plf_live_io_cmd'][1])
+assert names['plf_live_io_cmd'][1]['st_value']==4
+assert data[at:at+4] == bytes.fromhex('76928dac'), data[at:at+4].hex()
+# Explicitly normalize this single IO entry to the verified OEM callback tag,
+# exactly as the already-validated build normalizes the two io_cmd callsites.
+data[at:at+4]=bytes.fromhex('b15322fa')
+resume=names['plf_bl_original_resume'][1]
+call=names['call_original_io'][1]
+assert resume['st_shndx']==call['st_shndx']
+assert call['st_value'] < resume['st_value'] < call['st_value']+call['st_size']
+rs=e.get_section(resume['st_shndx'])
+assert data[rs['sh_offset']+resume['st_value']-4:rs['sh_offset']+resume['st_value']] == bytes.fromhex('00023fd6'), 'exact BLR x16 -> LR marker required'
 path.write_bytes(data)
 fixed=ELFFile(BytesIO(data))
 imports=lambda elf:{s.name for s in elf.get_section_by_name('.symtab').iter_symbols() if s.name and s['st_shndx']=='SHN_UNDEF'}

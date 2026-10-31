@@ -4,13 +4,7 @@ This directory documents the minimum property required by the PLF110 companion
 root module. It does not replace the LKM and must not be used on a device that
 does not expose a real 144 Hz DRM mode.
 
-**ColorOS 17:** according to the maintainer's PLF110 usage, the ColorOS 16
-policy integration described below can be skipped. KO injection and display
-mode enumeration are still required. The existing Stable-278 ZIP does not
-automatically disable its old policy steps on ColorOS 17.
-
-The settings/property path below applies to ColorOS 16. See the
-[complete companion notes](../docs/Stable-278-Module.md) for release behavior.
+For the current package flow, see [Stable-280 companion notes](../docs/Stable-280-Module.md).
 
 ColorOS 16 first builds its refresh-rate list from
 `Display.getSupportedModes()`. Its `ScreenRefreshAppPreference` then reads

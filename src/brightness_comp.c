@@ -25,6 +25,7 @@ static const char *sync_status_path=SYSROOT "/module/PLF110_Display_OC/parameter
 static const char *sync_control_path=SYSROOT "/module/PLF110_Display_OC/parameters/brightness_sync_control";
 static const char *sync_enable_path=SYSROOT "/module/PLF110_Display_OC/parameters/brightness_sync_enable";
 static bool sync_allowed=false;
+static bool live_ready=false,live_unknown=false;
 static long sync_seen=0,sync_gain=-1,sync_request=-1,sync_guard=-1;
 static double next_sync_probe=0;
 static double now(void);
@@ -156,14 +157,19 @@ static void adopt_kernel_output(const char *status,const struct snapshot *s) {
 static void update_kernel_sync(long gain) {
     char status[512],text[64];struct snapshot s;
     if(now()<next_sync_probe) return;
+    live_ready=false;live_unknown=false;
     if(text_file(sync_status_path,status,sizeof(status))) {
+        /* Never send an already-corrected DBV to an unknown live hook. */
+        live_unknown=read_number(sync_enable_path)==1;
         next_sync_probe=now()+5;return;
     }
     long enabled=token(status,"enabled");
+    live_ready=enabled==1&&token(status,"live")==1;
     bool valid=sample(&s);
     if(valid) adopt_kernel_output(status,&s);
     if(!sync_allowed) {
         if(enabled==1) write_text(sync_enable_path,"0\n");
+        live_ready=false;
         return;
     }
     // Do not feed fractional percentages to an older integer-only KO.
@@ -173,6 +179,7 @@ static void update_kernel_sync(long gain) {
             write_text(sync_control_path,"100:0:1\n");
             write_text(sync_enable_path,"0\n");
         }
+        live_ready=false;
         next_sync_probe=now()+5;
         return;
     }
@@ -186,8 +193,12 @@ static void update_kernel_sync(long gain) {
         sync_gain=gain;sync_request=s.request;sync_guard=guard;
     }
     if(enabled==0) {
-        if(write_text(sync_enable_path,"1\n")) puts("kernel brightness sync enabled after boot");
-        else {puts("kernel brightness sync unavailable; userspace fallback");next_sync_probe=now()+5;}
+        if(write_text(sync_enable_path,"1\n")) {
+            puts("kernel brightness sync enabled after boot");
+            if(!text_file(sync_status_path,status,sizeof(status)))
+                live_ready=token(status,"enabled")==1&&token(status,"live")==1;
+            else live_unknown=true;
+        } else {puts("kernel brightness sync unavailable; userspace fallback");next_sync_probe=now()+5;}
     }
 }
 static void stop_kernel_sync(void) {
@@ -200,6 +211,7 @@ static void stop_kernel_sync(void) {
 }
 static void step(long gain) {
     struct snapshot s,verify;
+    if(live_unknown) return;
     if(!sample(&s)) return;
     if(owned&&s.panel!=last_written) relinquish();
     bool custom=(s.hopping==1&&s.rate==1399);
@@ -213,7 +225,11 @@ static void step(long gain) {
     if(s.panel!=s.request&&!(owned&&s.panel==last_written)) return;
     if(s.request<=1||protected_brightness()) return;
     if(!sample(&verify)||!same(&s,&verify)) return;
-    if(!write_panel(target)) {
+    /* The live KO intercepts RAW input and compensates it exactly once.
+     * Send the original request, not an already scaled target. Otherwise
+     * a userspace adjustment/config change would be scaled twice. */
+    long command=live_ready&&custom ? s.request : target;
+    if(!write_panel(command)) {
         fprintf(stderr,"brightness write failed: %s\n",strerror(errno));
         stopping=1; return;
     }

@@ -1,6 +1,6 @@
 # PLF110 Display Overclock · 144Hz
 
-[中文](README_CN.md) · [Download](https://github.com/lenluxue/PLF110-Display-Overclock-LKM/releases/latest) · [Changelog](changelog.md)
+[中文](README_CN.md) · [Download](https://github.com/lenluxue/PLF110-Display-Overclock-LKM/releases/latest) · [Changelog](docs/changelog-history.md)
 
 ![PLF110 144Hz](assets/IMG_20261003_094440.jpg)
 
@@ -16,7 +16,7 @@ Future updates are available through the manager.
 
 ## Current release
 
-**Stable-279**: 1399Mbps link at 144Hz; synchronized brightness compensation defaults to 93%, adjustable in 0.1% steps.
+**Stable-280**: 1399Mbps link at 144Hz; normal backlight requests are compensated once before sending. Default gain: 93%, adjustable in 0.1% steps.
 App policy defaults: regular apps 120Hz, short-video apps 60Hz, listed games 144Hz, with selected gacha games excluded.
 Installable packages are kept in Releases; this repository contains source and documentation.
 
@@ -24,16 +24,15 @@ Installable packages are kept in Releases; this repository contains source and d
 
 PLF110 / MT6989 baseline; tested software environments include ColorOS 17 and ColorOS 16.1.
 The installer accepts 6.1.157, 6.1.134, 6.1.118 and 6.1.115; matching these numbers does not prove ABI compatibility.
-ColorOS 17 needs no additional legacy policy integration, but this package retains its existing policy.
 
 Overclocking may cause flicker, corruption, black screens or boot failures. Keep a way to disable the module.
 The brightness gain is a device-specific visual calibration, not a guarantee across all brightness, HDR and fingerprint states.
 
 ## Source and credits
 
-- [Stable-279 implementation](docs/Stable-279.md)
+- [Stable-280 implementation](docs/Stable-280.md)
 - [Build and ABI reference](docs/Reference-build.md)
-- [Companion flow](docs/Stable-278-Module.md) (retained in 279; brightness additions documented above)
+- [Companion flow](docs/Stable-280-Module.md)
 - [Changelog archive](docs/changelog-history.md)
 
 Thanks to [Yunnijian/MTK-Display-Overclock-LKM](https://github.com/Yunnijian/MTK-Display-Overclock-LKM),
