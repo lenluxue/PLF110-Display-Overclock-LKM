@@ -12,7 +12,7 @@ English: [README.md](../README.md)
 60/90/120/30Hz 模式、指纹、高亮度模式以及 ColorOS 的 VRR/ADFR 管理接口
 继续沿用原始驱动。
 
-当前正式基准为 Stable-278：像素时钟 `464486kHz`，自定义链路 `1399Mbps`。
+基础模式基准为 Stable-278；当前正式版为 [Stable-281](Stable-281.md)：像素时钟 `464486kHz`，自定义链路 `1399Mbps`。
 该发行包的 KO 参数、回调路径与配套 HWC 生效流程见
 [Stable-278 KO 实现说明](../docs/Stable-278-KO.md)。
 
@@ -143,7 +143,8 @@ DDIC 初始化、指纹局部 HBM、亮度和 ESD 路径；144Hz 只增加主机
 
 ## 编译
 
-唯一入口为 `scripts/build_module.sh`。构建需要精确对应的外部输入，仓库不复制
+基础模式入口为 `scripts/build_module.sh`；当前亮度扩展使用 `scripts/build_brightness.sh`，
+worker使用 `scripts/build_worker.sh`，详见 [281实现说明](Stable-281.md#构建与校验)。构建需要精确对应的外部输入，仓库不复制
 OnePlusOSS 的大型源码树。
 
 | 环境变量 | 内容 |
@@ -196,7 +197,7 @@ cat /sys/module/PLF110_Display_OC/parameters/modes
 
 ## ColorOS 版本说明
 
-当前配套流程见 [Stable-280](Stable-280-Module.md)。下方保留属性与配置机制的历史分析，不表示包内有按ROM版本自动跳过的分支。
+当前配套流程见 [Stable-281](Stable-281-Module.md)。下方保留属性与配置机制的历史分析，不表示包内有按ROM版本自动跳过的分支。
 
 <details>
 <summary>ColorOS 16：系统接管适配与历史包策略</summary>

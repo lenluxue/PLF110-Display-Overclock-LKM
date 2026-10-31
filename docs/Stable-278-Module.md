@@ -1,6 +1,6 @@
 # Stable-278 配套模块说明
 
-> 历史版本说明；当前实现见 [Stable-280](Stable-280.md) 与 [配套流程](Stable-280-Module.md)。
+> 历史版本说明；当前实现见 [Stable-281](Stable-281.md) 与 [配套流程](Stable-281-Module.md)。
 
 本文对照正式 `PLF110-144-v1.12.1-Stable-278.zip` 的实际文件整理。
 KO 参数和回调实现见 [Stable-278 KO 实现说明](Stable-278-KO.md)。

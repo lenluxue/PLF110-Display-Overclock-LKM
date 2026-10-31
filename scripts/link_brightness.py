@@ -40,6 +40,7 @@ def word_offset(elf, symbol):
 patches = {
     'plf_brightness_vdo_update':'plf110_mode_switch_update_for_vdo',
     'phy_pre_handler':'panel_pre_handler', 'live_pre_handler':'panel_pre_handler',
+    'curve_set':'refresh_set', 'curve_get':'status_get',
     'control_set':'refresh_set', 'sync_enable_set':'refresh_set',
     'control_get':'status_get', 'sync_enable_get':'status_get', 'sync_status_get':'status_get',
 }

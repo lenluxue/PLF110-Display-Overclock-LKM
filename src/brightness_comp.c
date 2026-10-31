@@ -24,6 +24,9 @@ static const char *alpha_path=SYSROOT "/kernel/oplus_display/dim_alpha";
 static const char *sync_status_path=SYSROOT "/module/PLF110_Display_OC/parameters/brightness_sync_status";
 static const char *sync_control_path=SYSROOT "/module/PLF110_Display_OC/parameters/brightness_sync_control";
 static const char *sync_enable_path=SYSROOT "/module/PLF110_Display_OC/parameters/brightness_sync_enable";
+static const char *curve_control_path=SYSROOT "/module/PLF110_Display_OC/parameters/brightness_curve_control";
+static plf_curve_word desired_curve=0,active_curve=0;
+static bool curve_unknown=false;
 static bool sync_allowed=false;
 static bool live_ready=false,live_unknown=false;
 static long sync_seen=0,sync_gain=-1,sync_request=-1,sync_guard=-1;
@@ -108,7 +111,7 @@ static bool protected_brightness(void) {
 }
 static long corrected(long request,long gain) {
     if(request<=1||request>3515) return request;
-    return plf_gain_target((unsigned int)request,(unsigned int)gain);
+    return plf_curve_target((unsigned int)request,(unsigned int)gain,active_curve);
 }
 static bool write_panel(long value) {
     char b[32]; int length=snprintf(b,sizeof(b),"%ld\n",value);
@@ -130,7 +133,7 @@ static bool module_disabled(void) {
 }
 static void relinquish(void) {owned=false;last_written=-1;}
 static void restore_owned(void) {
-    if(!owned) return;
+    if(!owned||live_unknown||curve_unknown) return;
     struct snapshot s,verify;
     if(!sample(&s)||s.panel!=last_written) {relinquish();return;}
     if(s.request==s.panel) {relinquish();return;}
@@ -146,6 +149,55 @@ static bool write_text(const char *path,const char *text) {
     size_t length=strlen(text);ssize_t n=write(fd,text,length);
     close(fd);return n==(ssize_t)length;
 }
+static bool read_curve(const char *path,plf_curve_word *out) {
+    char b[128];int fd=open(path,O_RDONLY|O_CLOEXEC);
+    if(fd<0) return false;
+    ssize_t n=read(fd,b,sizeof(b));close(fd);
+    // Never accept a truncated file or an embedded NUL hiding trailing data.
+    if(n<=0||(size_t)n>=sizeof(b)||memchr(b,0,(size_t)n)) return false;
+    b[n]=0;return !plf_parse_curve(b,out);
+}
+static void refresh_curve_config(void) {
+    char config[1024];plf_curve_word next=0;
+    int n=moddir ? snprintf(config,sizeof(config),"%s/brightness_curve.conf",moddir) : -1;
+    if(n>=0&&(size_t)n<sizeof(config)) read_curve(config,&next);
+    // Deleted/invalid config disables the curve, retaining fixed base gain.
+    desired_curve=next;
+}
+static void curve_text(char *b,size_t cap,plf_curve_word v) {
+    if(!v) {snprintf(b,cap,"0\n");return;}
+    unsigned int lo=plf_curve_low(v),mid=plf_curve_mid(v),hi=plf_curve_high(v);
+    if(plf_curve_low_extra(v)||plf_curve_high_extra(v)) {
+        unsigned int extra=plf_curve_high_extra(v);
+        snprintf(b,cap,"1:%u:%u.%u:%u.%u:%u.%u:%u:%u.%u\n",plf_curve_pivot(v),
+            lo/10,lo%10,mid/10,mid%10,hi/10,hi%10,plf_curve_low_extra(v),extra/10,extra%10);
+        return;
+    }
+    snprintf(b,cap,"1:%u:%u.%u:%u.%u:%u.%u\n",plf_curve_pivot(v),
+        lo/10,lo%10,mid/10,mid%10,hi/10,hi%10);
+}
+static bool configure_curve(plf_curve_word wanted) {
+    plf_curve_word actual;
+    char b[128];
+    if(!read_curve(curve_control_path,&actual)) return false;
+    if(actual!=wanted) {
+        curve_text(b,sizeof(b),wanted);
+        /* A failed/rejected write may leave an older valid profile active.
+         * In either case read the accepted word, not the desired setting. */
+        write_text(curve_control_path,b);
+        if(!read_curve(curve_control_path,&actual)) return false;
+    }
+    active_curve=actual;return true;
+}
+static bool control_matches(long gain,long request,long guard) {
+    char b[64];const char *p=b;char *end;
+    unsigned int units;long q,g;
+    if(text_file(sync_control_path,b,sizeof(b))||plf_parse_gain(&p,&units)||*p++!=':') return false;
+    errno=0;q=strtol(p,&end,10);
+    if(errno||end==p||*end!=':') return false;
+    p=end+1;errno=0;g=strtol(p,&end,10);
+    return !errno&&end!=p&&plf_curve_end(end)&&units==(unsigned int)gain&&q==request&&g==guard;
+}
 static void adopt_kernel_output(const char *status,const struct snapshot *s) {
     long queued=token(status,"queued");
     if(queued>0&&queued!=sync_seen&&token(status,"request")==s->request&&
@@ -157,61 +209,103 @@ static void adopt_kernel_output(const char *status,const struct snapshot *s) {
 static void update_kernel_sync(long gain) {
     char status[512],text[64];struct snapshot s;
     if(now()<next_sync_probe) return;
-    live_ready=false;live_unknown=false;
+    live_ready=false;live_unknown=false;curve_unknown=false;
     if(text_file(sync_status_path,status,sizeof(status))) {
-        /* Never send an already-corrected DBV to an unknown live hook. */
-        live_unknown=read_number(sync_enable_path)==1;
+        /* Unknown active live/curve hooks must never receive scaled input. */
+        long enabled=read_number(sync_enable_path);
+        live_unknown=enabled!=0;
+        curve_unknown=live_unknown&&active_curve!=0;
+        if(!live_unknown) active_curve=0;
         next_sync_probe=now()+5;return;
     }
     long enabled=token(status,"enabled");
+    long curve_version=token(status,"curve_api");
+    bool curve_api=curve_version==1||curve_version==2;
+    // Do not send endpoint fields to a v1 KO or use them only in userspace.
+    plf_curve_word compatible_curve=curve_version==2 ? desired_curve :
+        (desired_curve & PLF_CURVE_CORE_MASK);
     live_ready=enabled==1&&token(status,"live")==1;
     bool valid=sample(&s);
     if(valid) adopt_kernel_output(status,&s);
+    if(enabled!=0&&enabled!=1) {live_unknown=true;return;}
+    if(curve_version>0&&!curve_api) {curve_unknown=true;return;}
     if(!sync_allowed) {
-        if(enabled==1) write_text(sync_enable_path,"0\n");
-        live_ready=false;
-        return;
-    }
-    // Do not feed fractional percentages to an older integer-only KO.
-    // Its existing output ownership is adopted above before safe fallback.
-    if(gain%PLF_GAIN_SCALE&&token(status,"gain_scale")!=(long)PLF_GAIN_SCALE) {
         if(enabled==1) {
-            write_text(sync_control_path,"100:0:1\n");
-            write_text(sync_enable_path,"0\n");
+            if(!write_text(sync_control_path,"100:0:1\n")||
+               !write_text(sync_enable_path,"0\n")||read_number(sync_enable_path)!=0) {
+                live_unknown=true;return;
+            }
         }
         live_ready=false;
-        next_sync_probe=now()+5;
-        return;
+        if(curve_api) {
+            if(!configure_curve(0)) {curve_unknown=true;return;}
+            /* Sync is off: curve is not interpreted by the kernel. */
+        }
+        active_curve=0;return;
     }
+    // Older KO keeps its original fixed-gain protocol and fallback.
+    if(gain%PLF_GAIN_SCALE&&token(status,"gain_scale")!=(long)PLF_GAIN_SCALE) {
+        if(enabled==1) {
+            if(!write_text(sync_control_path,"100:0:1\n")||
+               !write_text(sync_enable_path,"0\n")||read_number(sync_enable_path)!=0) {
+                live_unknown=true;return;
+            }
+        }
+        live_ready=false;active_curve=0;
+        next_sync_probe=now()+5;return;
+    }
+    if(!curve_api) active_curve=0;
     if(!valid) return;
+    /* Configure and confirm the curve BEFORE first enabling the live hook.
+     * Worker targets always use the profile actually accepted by the KO. */
+    if(curve_api&&!configure_curve(compatible_curve)) {
+        curve_unknown=true;next_sync_probe=now()+5;return;
+    }
     long guard=protected_brightness()||
         (s.panel!=s.request&&!(owned&&s.panel==last_written)) ? 1 : 0;
-    if(gain!=sync_gain||s.request!=sync_request||guard!=sync_guard) {
+    if(gain!=sync_gain||s.request!=sync_request||guard!=sync_guard||
+       (curve_api&&!control_matches(gain,s.request,guard))) {
         char percent[16];gain_text(percent,sizeof(percent),gain);
         snprintf(text,sizeof(text),"%s:%ld:%ld\n",percent,s.request,guard);
-        if(!write_text(sync_control_path,text)) {next_sync_probe=now()+5;return;}
+        if(!write_text(sync_control_path,text)||
+           (curve_api&&!control_matches(gain,s.request,guard))) {
+            live_unknown=enabled==1;curve_unknown=curve_api;
+            next_sync_probe=now()+5;return;
+        }
         sync_gain=gain;sync_request=s.request;sync_guard=guard;
     }
     if(enabled==0) {
         if(write_text(sync_enable_path,"1\n")) {
             puts("kernel brightness sync enabled after boot");
-            if(!text_file(sync_status_path,status,sizeof(status)))
-                live_ready=token(status,"enabled")==1&&token(status,"live")==1;
-            else live_unknown=true;
-        } else {puts("kernel brightness sync unavailable; userspace fallback");next_sync_probe=now()+5;}
-    }
+            if(!text_file(sync_status_path,status,sizeof(status))) {
+                long e=token(status,"enabled"),l=token(status,"live");
+                live_ready=e==1&&l==1;
+                live_unknown=(e!=0&&e!=1)||(e==1&&l!=0&&l!=1);
+                if(curve_api&&!configure_curve(compatible_curve)) curve_unknown=true;
+            } else live_unknown=true;
+        } else {
+            puts("kernel brightness sync unavailable; userspace fallback");
+            /* A failed write must not be assumed to mean no active hook. */
+            live_unknown=read_number(sync_enable_path)!=0;
+            next_sync_probe=now()+5;
+        }
+    } else if(token(status,"live")!=0&&token(status,"live")!=1) live_unknown=true;
 }
 static void stop_kernel_sync(void) {
     char status[512];struct snapshot s;
     if(!text_file(sync_status_path,status,sizeof(status))&&token(status,"enabled")==1) {
         if(sample(&s)) adopt_kernel_output(status,&s);
-        write_text(sync_control_path,"100:0:1\n");
-        write_text(sync_enable_path,"0\n");
-    }
+        if(!write_text(sync_control_path,"100:0:1\n")||
+           !write_text(sync_enable_path,"0\n")||read_number(sync_enable_path)!=0) {
+            live_unknown=true;return;
+        }
+    } else if(read_number(sync_enable_path)!=0) {live_unknown=true;return;}
+    write_text(curve_control_path,"0\n");
+    active_curve=0;live_ready=false;live_unknown=false;curve_unknown=false;
 }
 static void step(long gain) {
     struct snapshot s,verify;
-    if(live_unknown) return;
+    if(live_unknown||curve_unknown) return;
     if(!sample(&s)) return;
     if(owned&&s.panel!=last_written) relinquish();
     bool custom=(s.hopping==1&&s.rate==1399);
@@ -234,7 +328,7 @@ static void step(long gain) {
         stopping=1; return;
     }
     char percent[16];gain_text(percent,sizeof(percent),gain);
-    printf("%s request=%ld output=%ld gain=%s%%\n",custom ? "144" : "stock",s.request,target,percent);
+    printf("%s request=%ld output=%ld base_gain=%s%% curve=%u\n",custom ? "144" : "stock",s.request,target,percent,!!active_curve);
     if(target==s.request) relinquish();
     else {owned=true;last_written=target;}
 }
@@ -290,6 +384,7 @@ int main(int argc,char **argv) {
             if(moddir&&snprintf(config,sizeof(config),"%s/brightness_sync.conf",moddir)<(int)sizeof(config))
                 sync_allowed=read_number(config)==1;
             else sync_allowed=false;
+            refresh_curve_config();
             last_config=t;
         }
         // The kernel queues the transition compensation. This 20ms worker

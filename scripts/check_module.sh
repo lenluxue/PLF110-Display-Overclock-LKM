@@ -110,6 +110,11 @@ if "$nm" "$module" | grep -q ' plf_original_vdo_update$'; then
  for symbol in control_get sync_enable_get sync_status_get; do
   check_symbol_cfi "$symbol" c64c3dfc
  done
+ if "$nm" "$module" | grep -q ' curve_set$'; then
+  check_symbol_cfi curve_set 63fa7f9c
+  check_symbol_cfi curve_get c64c3dfc
+  grep -aFq 'curve_api=2' "$module" || fail "missing endpoint-curve capability"
+ fi
  grep -aFq 'gain_scale=10' "$module" || fail "missing fractional brightness gain capability"
 else
  check_symbol_cfi plf110_mode_switch_update_for_vdo 9fc1a63b

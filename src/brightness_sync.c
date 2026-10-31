@@ -50,10 +50,13 @@ static void *saved_phy_addr, *saved_ofp_addr, *saved_live_addr;
 static unsigned int sync_enabled;
 /* gain x10 in bits 0..15, original LED request in 16..31, guard in bit 32. */
 static u64 sync_control = PLF_GAIN_MAX | ((u64)1 << 32);
+/* Disabled until the post-boot worker publishes a validated profile. */
+static u64 curve_control;
 static unsigned int context_busy;
 static struct task_struct *context_task;
 static struct mtk_dsi *context_dsi;
 static unsigned int context_target, context_request, context_gain;
+static u64 context_curve;
 static bool context_taken, context_entering;
 static const void *internal_bl_param;
 static unsigned int live_enabled;
@@ -101,6 +104,7 @@ static noinline void sync_phy_call(struct mtk_dsi *dsi, struct cmdq_pkt *handle)
         control_snapshot(&gain, &request) &&
         gain == READ_ONCE(context_gain) &&
         request == READ_ONCE(context_request) &&
+        READ_ONCE(curve_control) == READ_ONCE(context_curve) &&
         dsi->ext && dsi->ext->params && dsi->ext->funcs &&
         dsi->ext->funcs->set_backlight_cmdq &&
         !dsi->ext->params->vdo_mix_mode_en && call_ofp_hbm() == 0) {
@@ -189,7 +193,7 @@ static noinline int plf_live_io_cmd(struct mtk_ddp_comp *comp,
         ret = call_original_io(comp, handle, DSI_HBM_GET_STATE, &hbm);
         if (ret < 0 || hbm) goto passthrough;
     }
-    target = plf_gain_target(request, gain);
+    target = plf_curve_target(request, gain, READ_ONCE(curve_control));
     if (target == request) goto passthrough;
     ret = call_original_io(comp, handle, cmd, &target);
     if (ret >= 0) {
@@ -291,6 +295,7 @@ int plf_brightness_vdo_update(struct drm_connector *connector,
     struct mtk_dsi *dsi = READ_ONCE(state.dsi);
     struct drm_display_mode *cur, *dst;
     unsigned int gain, request, target;
+    u64 curve;
     int ret;
     bool entering, exiting;
     if (!READ_ONCE(sync_enabled) || !dsi || !connector ||
@@ -306,11 +311,13 @@ int plf_brightness_vdo_update(struct drm_connector *connector,
         WRITE_ONCE(context_busy, 0);
         return plf_original_vdo_update(connector, cur_mode, dst_mode);
     }
-    target = entering ? plf_gain_target(request, gain) : request;
+    curve = READ_ONCE(curve_control);
+    target = entering ? plf_curve_target(request, gain, curve) : request;
     if (target < 2) target = 2;
     WRITE_ONCE(context_dsi, dsi);
     WRITE_ONCE(context_request, request);
     WRITE_ONCE(context_gain, gain);
+    WRITE_ONCE(context_curve, curve);
     WRITE_ONCE(context_target, target);
     WRITE_ONCE(context_entering, entering);
     WRITE_ONCE(context_taken, false);
@@ -420,17 +427,47 @@ static int sync_enable_get(char *buffer, const struct kernel_param *kp)
 }
 static int sync_status_get(char *buffer, const struct kernel_param *kp)
 {
+    u64 curve = READ_ONCE(curve_control);
     (void)kp;
     return scnprintf(buffer, PAGE_SIZE,
-        "enabled=%u modes=%lu queued=%lu skipped=%lu request=%u target=%u error=%d gain_scale=10 live=%u live_seen=%lu live_fixed=%lu live_skipped=%lu live_error=%d live_input=raw\n",
+        "enabled=%u modes=%lu queued=%lu skipped=%lu request=%u target=%u error=%d gain_scale=10 live=%u live_seen=%lu live_fixed=%lu live_skipped=%lu live_error=%d live_input=raw curve_api=2 curve=%u pivot=%u low=%u mid=%u high=%u low_extra=%u high_extra=%u\n",
         READ_ONCE(sync_enabled), READ_ONCE(sync_modes), READ_ONCE(sync_queued),
         READ_ONCE(sync_skipped), READ_ONCE(last_request), READ_ONCE(last_target),
         READ_ONCE(sync_error), READ_ONCE(live_enabled), READ_ONCE(live_seen),
-        READ_ONCE(live_fixed), READ_ONCE(live_skipped), READ_ONCE(live_error));
+        READ_ONCE(live_fixed), READ_ONCE(live_skipped), READ_ONCE(live_error),
+        !!curve, plf_curve_pivot(curve), plf_curve_low(curve),
+        plf_curve_mid(curve), plf_curve_high(curve),
+        plf_curve_low_extra(curve), plf_curve_high_extra(curve));
+}
+static int curve_set(const char *p, const struct kernel_param *kp)
+{
+    plf_curve_word v;
+    (void)kp;
+    if (plf_parse_curve(p, &v)) return -EINVAL;
+    WRITE_ONCE(curve_control, (u64)v);
+    return 0;
+}
+static int curve_get(char *buffer, const struct kernel_param *kp)
+{
+    u64 v = READ_ONCE(curve_control);
+    unsigned int low = plf_curve_low(v), mid = plf_curve_mid(v), high = plf_curve_high(v);
+    (void)kp;
+    if (!v) return scnprintf(buffer, PAGE_SIZE, "0\n");
+    if (plf_curve_low_extra(v) || plf_curve_high_extra(v)) {
+        unsigned int extra = plf_curve_high_extra(v);
+        return scnprintf(buffer, PAGE_SIZE, "1:%u:%u.%u:%u.%u:%u.%u:%u:%u.%u\n",
+            plf_curve_pivot(v), low / 10, low % 10, mid / 10, mid % 10,
+            high / 10, high % 10, plf_curve_low_extra(v), extra / 10, extra % 10);
+    }
+    return scnprintf(buffer, PAGE_SIZE, "1:%u:%u.%u:%u.%u:%u.%u\n",
+        plf_curve_pivot(v), low / 10, low % 10, mid / 10, mid % 10,
+        high / 10, high % 10);
 }
 static const struct kernel_param_ops control_ops = { .set=control_set, .get=control_get };
 static const struct kernel_param_ops enable_ops = { .set=sync_enable_set, .get=sync_enable_get };
 static const struct kernel_param_ops status_ops = { .get=sync_status_get };
+static const struct kernel_param_ops curve_ops = { .set=curve_set, .get=curve_get };
 module_param_cb(brightness_sync_control, &control_ops, NULL, 0600);
 module_param_cb(brightness_sync_enable, &enable_ops, NULL, 0600);
 module_param_cb(brightness_sync_status, &status_ops, NULL, 0400);
+module_param_cb(brightness_curve_control, &curve_ops, NULL, 0600);

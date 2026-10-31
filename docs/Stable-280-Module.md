@@ -1,5 +1,7 @@
 # Stable-280 配套模块流程
 
+> 历史版本流程；当前流程见 [Stable-281](Stable-281-Module.md)。
+
 对照正式280 ZIP，版本 `1.12.1-144-Stable-280` / `versionCode=280`。
 亮度算法见 [280实现说明](Stable-280.md)，原配置细节见 [278历史流程](Stable-278-Module.md)。
 

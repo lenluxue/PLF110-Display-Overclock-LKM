@@ -4,7 +4,7 @@ This directory documents the minimum property required by the PLF110 companion
 root module. It does not replace the LKM and must not be used on a device that
 does not expose a real 144 Hz DRM mode.
 
-For the current package flow, see [Stable-280 companion notes](../docs/Stable-280-Module.md).
+For the current package flow, see [Stable-281 companion notes](../docs/Stable-281-Module.md).
 
 ColorOS 16 first builds its refresh-rate list from
 `Display.getSupportedModes()`. Its `ScreenRefreshAppPreference` then reads

@@ -16,7 +16,7 @@ Future updates are available through the manager.
 
 ## Current release
 
-**Stable-280**: 1399Mbps link at 144Hz; normal backlight requests are compensated once before sending. Default gain: 93%, adjustable in 0.1% steps.
+**Stable-281**: 1399Mbps link at 144Hz; normal backlight requests are compensated once before sending. Brightness-dependent curve with endpoint correction; default base gain: 92%.
 App policy defaults: regular apps 120Hz, short-video apps 60Hz, listed games 144Hz, with selected gacha games excluded.
 Installable packages are kept in Releases; this repository contains source and documentation.
 
@@ -30,9 +30,9 @@ The brightness gain is a device-specific visual calibration, not a guarantee acr
 
 ## Source and credits
 
-- [Stable-280 implementation](docs/Stable-280.md)
+- [Stable-281 implementation](docs/Stable-281.md)
 - [Build and ABI reference](docs/Reference-build.md)
-- [Companion flow](docs/Stable-280-Module.md)
+- [Companion flow](docs/Stable-281-Module.md)
 - [Changelog archive](docs/changelog-history.md)
 
 Thanks to [Yunnijian/MTK-Display-Overclock-LKM](https://github.com/Yunnijian/MTK-Display-Overclock-LKM),

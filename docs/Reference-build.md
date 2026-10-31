@@ -12,7 +12,7 @@ stock panel driver. It appends one validated 144 Hz DRM mode while preserving
 the stock 60/90/120/30 Hz modes and the original ColorOS VRR/ADFR, fingerprint,
 HBM, brightness, DSC, and ESD paths.
 
-The current reference is Stable-278: 464486 kHz pixel clock and a 1399 Mbps
+The base-mode reference is Stable-278; the current release is [Stable-281](Stable-281.md): 464486 kHz pixel clock and a 1399 Mbps
 custom link. See [Stable-278 KO implementation notes](../docs/Stable-278-KO.md)
 for the release hashes, callback flow, and companion HWC refresh sequence.
 
@@ -120,6 +120,8 @@ regressions.
 
 ## Build
 
+For the current brightness extension, use `scripts/build_brightness.sh` with the pinned original Stable-278 KO, and `scripts/build_worker.sh` for the validated Android/Bionic worker. See [Stable-281](Stable-281.md). The base-mode build below is not the complete current release.
+
 Use `scripts/build_module.sh` with the exact generated headers, OnePlus kernel
 source, vendor display source, and validated toolchain:
 
@@ -165,7 +167,7 @@ and lists `1080x2392@144`.
 
 ## ColorOS versions
 
-Current package flow: [Stable-280](Stable-280-Module.md). The historical integration below documents the property/configuration mechanism, not an automatic ROM-version branch.
+Current package flow: [Stable-281](Stable-281-Module.md). The historical integration below documents the property/configuration mechanism, not an automatic ROM-version branch.
 
 <details>
 <summary>ColorOS 16: policy integration and historical release behavior</summary>

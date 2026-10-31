@@ -1,6 +1,6 @@
 # Stable-278 KO 实现说明
 
-> 历史版本说明；当前实现见 [Stable-280](Stable-280.md) 与 [配套流程](Stable-280-Module.md)。
+> 历史版本说明；当前实现见 [Stable-281](Stable-281.md) 与 [配套流程](Stable-281-Module.md)。
 
 本文对照 `PLF110-144-v1.12.1-Stable-278.zip` 中的正式 KO 整理。
 入口源码为 [`src/PLF110_144_Mode.c`](../src/PLF110_144_Mode.c)，
