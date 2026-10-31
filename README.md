@@ -16,7 +16,7 @@ Future updates are available through the manager.
 
 ## Current release
 
-**Stable-279**: 1399Mbps link at 144Hz; synchronized brightness compensation defaults to 86.5%, adjustable in 0.1% steps.
+**Stable-279**: 1399Mbps link at 144Hz; synchronized brightness compensation defaults to 93%, adjustable in 0.1% steps.
 App policy defaults: regular apps 120Hz, short-video apps 60Hz, listed games 144Hz, with selected gacha games excluded.
 Installable packages are kept in Releases; this repository contains source and documentation.
 

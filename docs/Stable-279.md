@@ -5,7 +5,7 @@
 
 ## 亮度同步
 
-- 默认 `brightness_gain.conf=86.5`，范围 70.0–100.0%，步进 0.1%；100 关闭补偿。
+- 默认 `brightness_gain.conf=93`，范围 70.0–100.0%，步进 0.1%；100 关闭补偿。
 - `brightness_sync.conf=1`；service 在系统启动完成及 HWC 流程之后启动 worker。
 - `src/brightness_sync.c` 把切档背光补偿排进同一 CMDQ，在原 PHY 时序更新前执行。
 - `src/brightness_comp.c` 每 20ms 维护原始亮度请求，热读配置并处理回退、退出恢复。
@@ -52,9 +52,12 @@ RPATH/RUNPATH。源码中的单元测试分支不进入生产构建，测试资�
 
 | 文件 | SHA-256 |
 | --- | --- |
-| Stable-279 ZIP | `5cc4681ead04f27eb14643cd35bae357bc636335fad1e5e2bbb2724ad05e0237` |
+| Stable-279 ZIP | `3d4c7e34440979fbce529f330ed7df8e617b964f711e2272f074b1976c3ff3c0` |
 | KO | `20390433055ead0c62b521bf5f88f014da1a7dbe3174b2cf0f457ca64a4f84ce` |
 | worker | `a912a69192d0dc9edc285286feea8c5090cef20392da45b2686ca93fc290b10a` |
 
-发布前仅修复 ZIP 目录条目重叠元数据；所有非目录文件逐字节保留，KO 67360 字节。
+初次发布时仅修复 ZIP 目录条目重叠元数据，未改文件内容；本次仅调整默认系数，KO 仍为 67360 字节。
 ZIP 完整性和 Android Shell 语法通过；静态检查不能替代新包的实机测试。
+
+默认系数按维护者实测从 86.5% 调整为 93%，覆盖同名 279 资产；KO、worker 和其他文件不变。
+版本号与 versionCode 仍为 279，已安装 279 的用户需重新下载刷入，不会收到更高版本号的自动更新提示。
