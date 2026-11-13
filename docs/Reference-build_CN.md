@@ -12,7 +12,7 @@ English: [README.md](../README.md)
 60/90/120/30Hz 模式、指纹、高亮度模式以及 ColorOS 的 VRR/ADFR 管理接口
 继续沿用原始驱动。
 
-基础模式基准为 Stable-278；当前正式版为 [Stable-281](Stable-281.md)：像素时钟 `464486kHz`，自定义链路 `1399Mbps`。
+基础模式基准为 Stable-278；当前正式版为 [Stable-282](Stable-282.md)：像素时钟 `464486kHz`，自定义链路 `1399Mbps`。
 该发行包的 KO 参数、回调路径与配套 HWC 生效流程见
 [Stable-278 KO 实现说明](../docs/Stable-278-KO.md)。
 

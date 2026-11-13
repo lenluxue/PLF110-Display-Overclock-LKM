@@ -16,9 +16,9 @@
 
 ## 当前版本
 
-**Stable-281**：144Hz 链路 1399Mbps；正常背光发送前单次补偿，加入分亮度曲线与两端修正，默认基础增益 92%。
-普通应用默认 120Hz、短视频 60Hz、游戏名单 144Hz，部分二游排除。
-完整安装包仅放在发行版，仓库保留源码和说明。
+**Stable-282**：应用刷新率 WebUI，区分默认与手动设置，支持搜索、筛选、保存和恢复。
+玻璃界面、刷新率配色与滑动交互；亮度设置合并为 `brightness.conf`，默认增益 92%。
+保留 1399Mbps 144Hz 链路、指纹与原有启动流程。完整安装包仅放在发行版。
 
 ## 兼容与风险
 
@@ -30,9 +30,9 @@
 
 ## 源码与致谢
 
-- [Stable-281 实现说明](docs/Stable-281.md)
+- [Stable-282 实现说明](docs/Stable-282.md)
 - [构建与 ABI 参考](docs/Reference-build_CN.md)
-- [配套模块流程](docs/Stable-281-Module.md)
+- [配套模块流程](docs/Stable-282-Module.md)
 - [历史更新日志](docs/changelog-history.md)
 
 感谢 [Yunnijian/MTK-Display-Overclock-LKM](https://github.com/Yunnijian/MTK-Display-Overclock-LKM)、

@@ -11,6 +11,7 @@
 #include <time.h>
 #include <unistd.h>
 #include "brightness_gain.h"
+#include "brightness_config.h"
 
 #ifndef SYSROOT
 #define SYSROOT "/sys"
@@ -67,9 +68,6 @@ static int text_file(const char *path,char *buf,size_t cap) {
 }
 static long read_number(const char *path) {
     char b[64]; return text_file(path,b,sizeof(b)) ? -1 : number(b);
-}
-static long read_gain(const char *path) {
-    char b[64]; return text_file(path,b,sizeof(b)) ? -1 : gain_number(b);
 }
 static long token(const char *text,const char *key) {
     size_t len=strlen(key);
@@ -157,12 +155,18 @@ static bool read_curve(const char *path,plf_curve_word *out) {
     if(n<=0||(size_t)n>=sizeof(b)||memchr(b,0,(size_t)n)) return false;
     b[n]=0;return !plf_parse_curve(b,out);
 }
-static void refresh_curve_config(void) {
-    char config[1024];plf_curve_word next=0;
-    int n=moddir ? snprintf(config,sizeof(config),"%s/brightness_curve.conf",moddir) : -1;
-    if(n>=0&&(size_t)n<sizeof(config)) read_curve(config,&next);
-    // Deleted/invalid config disables the curve, retaining fixed base gain.
-    desired_curve=next;
+static void refresh_brightness_config(const char *path,long *gain) {
+    char buffer[PLF_BRIGHTNESS_CONFIG_CAP];
+    struct plf_brightness_config next;
+    int fd=open(path,O_RDONLY|O_CLOEXEC);
+    if(fd<0) return;
+    ssize_t n=read(fd,buffer,sizeof(buffer));close(fd);
+    if(n<=0||plf_parse_brightness_config(buffer,(size_t)n,&next)) return;
+    /* A single file and a validated temporary profile: partial writes cannot
+     * mix a new gain with an old curve or briefly disable compensation. */
+    *gain=(long)next.gain;
+    sync_allowed=next.sync==1;
+    desired_curve=next.curve;
 }
 static void curve_text(char *b,size_t cap,plf_curve_word v) {
     if(!v) {snprintf(b,cap,"0\n");return;}
@@ -345,7 +349,7 @@ static void pause_100ms(void) {pause_for(100);}
 #ifndef UNIT_TEST
 int main(int argc,char **argv) {
     if(argc!=4&&argc!=5) {
-        fprintf(stderr,"usage: %s GAIN(70..100, step=0.1) SECONDS(1..300 or 0=daemon) CONFIG [MODDIR]\n",argv[0]);
+        fprintf(stderr,"usage: %s GAIN(70..100, step=0.1) SECONDS(1..300 or 0=daemon) BRIGHTNESS_CONFIG [MODDIR]\n",argv[0]);
         return 2;
     }
     long gain=gain_number(argv[1]),seconds=number(argv[2]);
@@ -377,14 +381,7 @@ int main(int argc,char **argv) {
             last_disabled=t;
         }
         if(t-last_config>=1.0) {
-            long next=read_gain(argv[3]);
-            // A deleted/invalid config disables compensation and restores.
-            gain=(next>=PLF_GAIN_MIN&&next<=PLF_GAIN_MAX) ? next : PLF_GAIN_MAX;
-            char config[1024];
-            if(moddir&&snprintf(config,sizeof(config),"%s/brightness_sync.conf",moddir)<(int)sizeof(config))
-                sync_allowed=read_number(config)==1;
-            else sync_allowed=false;
-            refresh_curve_config();
+            refresh_brightness_config(argv[3],&gain);
             last_config=t;
         }
         // The kernel queues the transition compensation. This 20ms worker

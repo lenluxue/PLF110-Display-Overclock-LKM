@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#eef3f6" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#101923" media="(prefers-color-scheme: dark)">
+  <title>PLF110 · 应用刷新率</title>
+  <link rel="stylesheet" href="./style.css?v=toast-glass-1">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-mark" aria-hidden="true">
+        <img src="./brand-icon.jpg" alt="">
+      </div>
+      <div class="heading-copy">
+        <h1>应用刷新率</h1>
+        <p class="heading-subtitle">PLF110 <span aria-hidden="true">·</span> lenluxue</p>
+      </div>
+      <div class="top-actions">
+        <button class="icon-button" id="restore-button" type="button" aria-label="恢复修改前配置" title="恢复修改前配置" hidden>
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 11a8.5 8.5 0 1 1 2.3 5.8M3.5 5.5v5.8h5.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 7.7V12l3 1.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <button class="icon-button" id="refresh-button" type="button" aria-label="刷新应用列表" title="刷新应用列表">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16M8 16H3v5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section class="status-strip" aria-label="配置状态">
+        <span class="status-light" id="status-light"></span>
+        <span id="connection-status">正在连接</span>
+      </section>
+
+      <div class="list-heading">
+        <div>
+          <h2>应用</h2>
+          <p><span id="app-count">--</span> 个已安装 <span class="count-divider">·</span> <span id="configured-count">--</span> 个手动设置</p>
+        </div>
+      </div>
+
+      <section class="controls" aria-label="筛选应用">
+        <label class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.4" stroke="currentColor" stroke-width="1.8"/><path d="m16 16 4.2 4.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <input id="search-input" type="search" autocomplete="off" placeholder="搜索应用或包名" aria-label="搜索应用或包名">
+        </label>
+        <div class="filter-tabs" role="tablist" aria-label="应用筛选，可长按左右滑动切换" data-active-filter="all" title="长按后左右滑动切换">
+          <button type="button" class="filter-tab is-active" role="tab" aria-selected="true" data-filter="all">全部</button>
+          <button type="button" class="filter-tab" role="tab" aria-selected="false" data-filter="configured">手动</button>
+        </div>
+      </section>
+
+      <section class="app-list" id="app-list" aria-live="polite" aria-busy="true">
+        <div class="list-placeholder"><span class="spinner"></span><span>正在读取应用</span></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="sheet-backdrop" id="sheet-backdrop" hidden>
+    <section class="rate-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+      <div class="sheet-handle"></div>
+      <div class="sheet-heading">
+        <div class="sheet-icon" id="sheet-icon"></div>
+        <div class="sheet-app-copy">
+          <h2 id="sheet-title">应用</h2>
+          <p id="sheet-package"></p>
+        </div>
+        <button class="icon-button sheet-close" id="sheet-close" type="button" aria-label="关闭">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <p class="policy-hint" id="sheet-policy-hint"></p>
+      <p class="choice-label">刷新率</p>
+      <div class="rate-options" id="rate-options" role="radiogroup" aria-label="选择应用刷新率"></div>
+      <div class="sheet-actions">
+        <button class="secondary-button" id="cancel-button" type="button">取消</button>
+        <button class="primary-button" id="save-button" type="button" disabled>
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m5 12.5 4.2 4.2L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          保存
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <dialog class="confirm-dialog" id="restore-dialog">
+    <div class="dialog-mark"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-.8 13H6.8L6 7m4 4v5m4-5v5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <h2>恢复修改前配置？</h2>
+    <p>将还原首次使用 WebUI 前的用户覆盖文件，并清除此页面保存的应用选项。</p>
+    <div class="dialog-actions"><button class="secondary-button" id="restore-cancel" type="button">取消</button><button class="danger-button" id="restore-confirm" type="button">恢复</button></div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="./policy.js" defer></script>
+  <script src="./filter-gesture.js?v=glass-fit-1" defer></script>
+  <script src="./overlay-navigation.js?v=1" defer></script>
+  <script src="./app.js?v=rate-colors-1" defer></script>
+</body>
+</html>

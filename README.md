@@ -16,9 +16,9 @@ Future updates are available through the manager.
 
 ## Current release
 
-**Stable-281**: 1399Mbps link at 144Hz; normal backlight requests are compensated once before sending. Brightness-dependent curve with endpoint correction; default base gain: 92%.
-App policy defaults: regular apps 120Hz, short-video apps 60Hz, listed games 144Hz, with selected gacha games excluded.
-Installable packages are kept in Releases; this repository contains source and documentation.
+**Stable-282**: app refresh-rate WebUI with distinct defaults and manual overrides, search, filters, save and restore.
+Glass styling, per-rate colors and gestures; brightness settings are unified in `brightness.conf`, with a default gain of 92%.
+Keeps the 1399Mbps 144Hz link, fingerprint support and existing boot flow. Installable packages stay in Releases.
 
 ## Compatibility and risks
 
@@ -30,9 +30,9 @@ The brightness gain is a device-specific visual calibration, not a guarantee acr
 
 ## Source and credits
 
-- [Stable-281 implementation](docs/Stable-281.md)
+- [Stable-282 implementation](docs/Stable-282.md)
 - [Build and ABI reference](docs/Reference-build.md)
-- [Companion flow](docs/Stable-281-Module.md)
+- [Companion flow](docs/Stable-282-Module.md)
 - [Changelog archive](docs/changelog-history.md)
 
 Thanks to [Yunnijian/MTK-Display-Overclock-LKM](https://github.com/Yunnijian/MTK-Display-Overclock-LKM),
